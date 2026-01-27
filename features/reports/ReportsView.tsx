@@ -23,7 +23,7 @@ interface ReportsViewProps {
   tareas: Tarea[];
   actividades: Actividad[];
   alertas: Alerta[];
-  users: User[];
+  users: User[]; // <--- AGREGAR ESTO SI FALTA
 }
 
 // Definition of available reports

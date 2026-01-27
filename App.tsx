@@ -59,6 +59,16 @@ export default function App() {
           fecha_esperada_inicio: '2024-02-01', fecha_esperada_fin: '2024-02-15',
           fecha_real_inicio: '2024-02-01T08:00:00Z',
           fecha_creacion: yesterday.toISOString()
+        },
+        // --- NUEVA TAREA DE PRUEBA (FINALIZADA) ---
+        { 
+          id: 99, id_proyecto: 1, id_disciplina: 1, nombre: 'Tarea Histórica Finalizada', 
+          id_ejecutor: 2, id_gerente_tarea: 3, estado: 'finalizado', // <--- Estado Finalizado
+          fecha_planeada_inicio_original: '2024-01-01', fecha_planeada_fin_original: '2024-01-05',
+          fecha_planeada_inicio_actualizada: '2024-01-01', fecha_planeada_fin_actualizada: '2024-01-05',
+          fecha_real_inicio: '2024-01-01T09:00:00Z',
+          fecha_real_fin: '2024-01-10T18:00:00Z', // <--- Tiene fecha real (5 días tarde)
+          fecha_creacion: '2024-01-01T08:00:00Z'
         }
       ];
       const mockActivities: Actividad[] = [
