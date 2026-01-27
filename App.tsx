@@ -208,7 +208,8 @@ export default function App() {
             proyectos={proyectos} 
             tareas={tareas} 
             actividades={actividades} 
-            alertas={alertas} 
+            alertas={alertas}
+            users={users} 
           />
         )}
         {activeTab === 'import' && <ImportView />}

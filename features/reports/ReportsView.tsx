@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Briefcase, Filter, Timer, CalendarCheck, CheckSquare, AlertTriangle } from 'lucide-react';
-import { Proyecto, Tarea, Actividad, Alerta } from '../../types/index';
+import { Proyecto, Tarea, Actividad, Alerta, User } from '../../types/index';
 
 // UI Components
 import { ReportCard } from './components/ReportCard';
@@ -23,6 +23,7 @@ interface ReportsViewProps {
   tareas: Tarea[];
   actividades: Actividad[];
   alertas: Alerta[];
+  users: User[];
 }
 
 // Definition of available reports
@@ -35,7 +36,7 @@ const REPORT_DEFINITIONS = [
   { id: 'alertas', title: 'Alertas Tempranas', icon: AlertTriangle }
 ];
 
-export const ReportsView: React.FC<ReportsViewProps> = ({ proyectos, tareas, actividades, alertas }) => {
+export const ReportsView: React.FC<ReportsViewProps> = ({ proyectos, tareas, actividades, alertas, users }) => {
   const [generating, setGenerating] = useState<boolean>(false);
   const [previewReport, setPreviewReport] = useState<{title: string, data: any[], type: string} | null>(null);
   
@@ -52,7 +53,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ proyectos, tareas, act
       case 'duracion':
         return getDurationData(tareas);
       case 'cumplimiento_fecha':
-        return getDeadlineData(proyectos, tareas);
+        return getDeadlineData(proyectos, tareas, users);
       case 'cumplimiento_diario':
         return getDailyData(proyectos, tareas, actividades);
       case 'alertas':
