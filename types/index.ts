@@ -14,6 +14,7 @@ export interface User {
 export interface Proyecto {
   id: number;
   nombre: string;
+  ot: string;
   id_linea_negocio: number;
   id_gerente_proyecto: number;
   estado: ProjectStatus;

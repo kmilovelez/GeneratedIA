@@ -37,8 +37,8 @@ export default function App() {
       const yesterday = new Date(Date.now() - 86400000);
 
       const mockProjects: Proyecto[] = [
-        { id: 1, nombre: 'Modernización Terminal A', id_linea_negocio: 1, id_gerente_proyecto: 2, estado: 'WIP', fecha_creacion: yesterday.toISOString() },
-        { id: 2, nombre: 'Sistema Clasificación Logística', id_linea_negocio: 2, id_gerente_proyecto: 2, estado: 'DECK', fecha_creacion: yesterday.toISOString() },
+        { id: 1, nombre: 'Modernización Terminal A', ot: 'OT-1001', id_linea_negocio: 1, id_gerente_proyecto: 2, estado: 'WIP', fecha_creacion: yesterday.toISOString() },
+        { id: 2, nombre: 'Sistema Clasificación Logística', ot: 'OT-2005', id_linea_negocio: 2, id_gerente_proyecto: 2, estado: 'DECK', fecha_creacion: yesterday.toISOString() },
       ];
       const mockTasks: Tarea[] = [
         { 
@@ -109,6 +109,10 @@ export default function App() {
     setTareas(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
   };
 
+  const updateProject = (projectId: number, updates: Partial<Proyecto>) => {
+    setProyectos(prev => prev.map(p => p.id === projectId ? { ...p, ...updates } : p));
+  };
+
   const addActivity = (taskId: number, nombre: string) => {
     const newActivity: Actividad = {
       id: Date.now(),
@@ -161,6 +165,7 @@ export default function App() {
             proyectos={proyectos} 
             users={users} 
             onAddProject={(p) => setProyectos([...proyectos, {...p, id: Date.now(), estado: 'DECK', fecha_creacion: new Date().toISOString()}])} 
+            onUpdateProject={updateProject}
             onDeleteProject={(id) => setProyectos(proyectos.filter(p => p.id !== id))} 
           />
         )}
