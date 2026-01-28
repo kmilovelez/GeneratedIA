@@ -148,7 +148,7 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
                 <label className="text-[10px] font-black uppercase text-slate-400">Nombre del Entregable</label>
                 <input 
                   type="text" 
-                  className="w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-blue-50 transition-all text-sm" 
+                  className="w-full p-3 bg-white text-slate-900 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-blue-50 transition-all text-sm font-medium" 
                   placeholder="Ej: Implementación Módulo de Usuarios" 
                   required 
                   value={newTaskForm.nombre} 
@@ -158,11 +158,23 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400">Fecha Inicio</label>
-                  <input type="date" className="w-full p-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100" required value={newTaskForm.fecha_planeada_inicio_original} onChange={e => setNewTaskForm({...newTaskForm, fecha_planeada_inicio_original: e.target.value})} />
+                  <input 
+                    type="date" 
+                    className="w-full p-2.5 bg-white text-slate-900 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 font-medium" 
+                    required 
+                    value={newTaskForm.fecha_planeada_inicio_original} 
+                    onChange={e => setNewTaskForm({...newTaskForm, fecha_planeada_inicio_original: e.target.value})} 
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400">Fecha Fin</label>
-                  <input type="date" className="w-full p-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100" required value={newTaskForm.fecha_planeada_fin_original} onChange={e => setNewTaskForm({...newTaskForm, fecha_planeada_fin_original: e.target.value})} />
+                  <input 
+                    type="date" 
+                    className="w-full p-2.5 bg-white text-slate-900 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 font-medium" 
+                    required 
+                    value={newTaskForm.fecha_planeada_fin_original} 
+                    onChange={e => setNewTaskForm({...newTaskForm, fecha_planeada_fin_original: e.target.value})} 
+                  />
                 </div>
               </div>
               <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all active:scale-[0.98]">
@@ -260,16 +272,16 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
                     <div className="space-y-2">
                       <span className="text-[9px] font-black text-blue-400 uppercase block">Actualización de Fechas</span>
                       <div className="space-y-2">
-                        <input type="date" className="text-[11px] font-bold border border-slate-100 rounded-xl w-full px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100 bg-slate-50/30" value={tarea.fecha_planeada_inicio_actualizada} onChange={e => onUpdateTaskDates(tarea.id, { fecha_planeada_inicio_actualizada: e.target.value })} />
-                        <input type="date" className="text-[11px] font-bold border border-slate-100 rounded-xl w-full px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100 bg-slate-50/30" value={tarea.fecha_planeada_fin_actualizada} onChange={e => onUpdateTaskDates(tarea.id, { fecha_planeada_fin_actualizada: e.target.value })} />
+                        <input type="date" className="text-[11px] font-bold border border-slate-100 rounded-xl w-full px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100 bg-white text-slate-900" value={tarea.fecha_planeada_inicio_actualizada} onChange={e => onUpdateTaskDates(tarea.id, { fecha_planeada_inicio_actualizada: e.target.value })} />
+                        <input type="date" className="text-[11px] font-bold border border-slate-100 rounded-xl w-full px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100 bg-white text-slate-900" value={tarea.fecha_planeada_fin_actualizada} onChange={e => onUpdateTaskDates(tarea.id, { fecha_planeada_fin_actualizada: e.target.value })} />
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <span className="text-[9px] font-black text-indigo-400 uppercase block">Proyección Esperada</span>
                       <div className="space-y-2">
-                        <input type="date" className="text-[11px] font-bold border border-slate-100 rounded-xl w-full px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-100 bg-slate-50/30" value={tarea.fecha_esperada_inicio || ''} onChange={e => onUpdateTaskDates(tarea.id, { fecha_esperada_inicio: e.target.value })} />
-                        <input type="date" className="text-[11px] font-bold border border-slate-100 rounded-xl w-full px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-100 bg-slate-50/30" value={tarea.fecha_esperada_fin || ''} onChange={e => onUpdateTaskDates(tarea.id, { fecha_esperada_fin: e.target.value })} />
+                        <input type="date" className="text-[11px] font-bold border border-slate-100 rounded-xl w-full px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-100 bg-white text-slate-900" value={tarea.fecha_esperada_inicio || ''} onChange={e => onUpdateTaskDates(tarea.id, { fecha_esperada_inicio: e.target.value })} />
+                        <input type="date" className="text-[11px] font-bold border border-slate-100 rounded-xl w-full px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-100 bg-white text-slate-900" value={tarea.fecha_esperada_fin || ''} onChange={e => onUpdateTaskDates(tarea.id, { fecha_esperada_fin: e.target.value })} />
                       </div>
                     </div>
 
@@ -315,7 +327,7 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
                       <input 
                         type="text" 
                         placeholder="Nombre de la nueva actividad..." 
-                        className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl text-sm shadow-sm outline-none focus:ring-4 focus:ring-blue-100/50 transition-all bg-white font-medium" 
+                        className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl text-sm shadow-sm outline-none focus:ring-4 focus:ring-blue-100/50 transition-all bg-white font-medium text-slate-900" 
                         value={newActivityInput[tarea.id] || ''} 
                         onChange={(e) => setNewActivityInput({ ...newActivityInput, [tarea.id]: e.target.value })} 
                         onKeyDown={(e) => e.key === 'Enter' && (onAddActivity(tarea.id, newActivityInput[tarea.id]), setNewActivityInput({...newActivityInput, [tarea.id]:''}))} 
