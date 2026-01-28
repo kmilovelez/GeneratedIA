@@ -10,7 +10,7 @@ export const getDailyData = (proyectos: Proyecto[], tareas: Tarea[], actividades
       'Actividad': a.nombre,
       'Tarea': t?.nombre || 'N/A',
       'Proyecto': proyectos.find(p => p.id === t?.id_proyecto)?.nombre || 'N/A',
-      'Cumplida': a.cumplida ? 'SÍ' : 'NO'
+      'Cumplida': a.isCompleted ? 'SÍ' : 'NO'
     };
   }).sort((a,b) => new Date(b['Fecha Registro']).getTime() - new Date(a['Fecha Registro']).getTime());
 };

@@ -34,56 +34,33 @@ export default function App() {
       setActividades(data.actividades || []);
       setAlertas(data.alertas || []);
     } else {
-      const now = new Date();
-      const yesterday = new Date(now.getTime() - 86400000);
+      const yesterday = new Date(Date.now() - 86400000);
 
       const mockProjects: Proyecto[] = [
-        { id: 1, nombre: 'Modernización Terminal A', id_linea_negocio: 1, id_gerente_proyecto: 2, estado: 'wip', fecha_creacion: yesterday.toISOString() },
-        { id: 2, nombre: 'Sistema Clasificación Logística', id_linea_negocio: 2, id_gerente_proyecto: 2, estado: 'deck', fecha_creacion: yesterday.toISOString() },
+        { id: 1, nombre: 'Modernización Terminal A', id_linea_negocio: 1, id_gerente_proyecto: 2, estado: 'WIP', fecha_creacion: yesterday.toISOString() },
+        { id: 2, nombre: 'Sistema Clasificación Logística', id_linea_negocio: 2, id_gerente_proyecto: 2, estado: 'DECK', fecha_creacion: yesterday.toISOString() },
       ];
       const mockTasks: Tarea[] = [
         { 
           id: 1, id_proyecto: 1, id_disciplina: 1, nombre: 'Desarrollo API Central', 
-          id_ejecutor: 4, id_gerente_tarea: 3, estado: 'wip',
+          id_ejecutor: 4, id_gerente_tarea: 3, estado: 'WIP',
           fecha_planeada_inicio_original: '2024-03-01', fecha_planeada_fin_original: '2024-03-30',
           fecha_planeada_inicio_actualizada: '2024-03-01', fecha_planeada_fin_actualizada: '2024-03-30',
           fecha_esperada_inicio: '2024-03-05', fecha_esperada_fin: '2024-04-05',
           fecha_real_inicio: yesterday.toISOString(),
           fecha_creacion: yesterday.toISOString()
-        },
-        { 
-          id: 2, id_proyecto: 1, id_disciplina: 2, nombre: 'Instalación Sensores', 
-          id_ejecutor: 4, id_gerente_tarea: 3, estado: 'wip',
-          fecha_planeada_inicio_original: '2024-02-01', fecha_planeada_fin_original: '2024-02-15',
-          fecha_planeada_inicio_actualizada: '2024-02-01', fecha_planeada_fin_actualizada: '2024-02-15',
-          fecha_esperada_inicio: '2024-02-01', fecha_esperada_fin: '2024-02-15',
-          fecha_real_inicio: '2024-02-01T08:00:00Z',
-          fecha_creacion: yesterday.toISOString()
-        },
-        // --- NUEVA TAREA DE PRUEBA (FINALIZADA) ---
-        { 
-          id: 99, id_proyecto: 1, id_disciplina: 1, nombre: 'Tarea Histórica Finalizada', 
-          id_ejecutor: 2, id_gerente_tarea: 3, estado: 'finalizado', // <--- Estado Finalizado
-          fecha_planeada_inicio_original: '2024-01-01', fecha_planeada_fin_original: '2024-01-05',
-          fecha_planeada_inicio_actualizada: '2024-01-01', fecha_planeada_fin_actualizada: '2024-01-05',
-          fecha_real_inicio: '2024-01-01T09:00:00Z',
-          fecha_real_fin: '2024-01-10T18:00:00Z', // <--- Tiene fecha real (5 días tarde)
-          fecha_creacion: '2024-01-01T08:00:00Z'
         }
       ];
       const mockActivities: Actividad[] = [
-        { id: 101, id_tarea: 1, nombre: 'Diseño de Base de Datos', estado: 'finalizado', cumplida: true, fecha_creacion: yesterday.toISOString() },
-        { id: 102, id_tarea: 1, nombre: 'Configuración Servidor', estado: 'wip', cumplida: false, fecha_creacion: yesterday.toISOString() },
-        { id: 103, id_tarea: 1, nombre: 'Elaboración planos infraestuctura', estado: 'wip', cumplida: false, fecha_creacion: yesterday.toISOString() },
-        { id: 104, id_tarea: 2, nombre: 'Actividad Adicional Post-Creación', estado: 'wip', cumplida: false, fecha_creacion: now.toISOString() }
+        { id: 101, id_tarea: 1, nombre: 'Diseño de Base de Datos', estado: 'FINALIZADA', isStarted: true, isCompleted: true, fecha_creacion: yesterday.toISOString() },
+        { id: 102, id_tarea: 1, nombre: 'Configuración Servidor', estado: 'WIP', isStarted: true, isCompleted: false, fecha_creacion: yesterday.toISOString() }
       ];
       setProyectos(mockProjects);
       setTareas(mockTasks);
       setActividades(mockActivities);
       
       setAlertas([
-        { id: 1, tipo: 'retraso_inicio', id_tarea: 1, mensaje: 'La tarea "Desarrollo API Central" tiene un retraso de 3 días en su inicio planeado.', activa: true },
-        { id: 2, tipo: 'retraso_finalizacion', id_tarea: 2, mensaje: 'Riesgo de cumplimiento en hito de finalización para Proyecto Aeropuertos.', activa: true }
+        { id: 1, tipo: 'retraso_inicio', id_tarea: 1, mensaje: 'La tarea "Desarrollo API Central" tiene un retraso de 3 días en su inicio planeado.', activa: true }
       ]);
     }
   }, []);
@@ -107,47 +84,29 @@ export default function App() {
     const newTask: Tarea = {
       ...taskData,
       id: Date.now(),
-      estado: 'deck',
+      estado: 'DECK',
       fecha_creacion: new Date().toISOString()
     };
     setTareas(prev => [...prev, newTask]);
   };
 
-  const addProject = (projectData: Omit<Proyecto, 'id' | 'estado' | 'fecha_creacion'>) => {
-    const newProject: Proyecto = {
-      ...projectData,
-      id: Date.now(),
-      estado: 'deck',
-      fecha_creacion: new Date().toISOString()
-    };
-    setProyectos(prev => [...prev, newProject]);
-  };
-
-  const deleteProject = (projectId: number) => {
-    if (window.confirm("¿Está seguro de eliminar este proyecto?")) {
-      setProyectos(prev => prev.filter(p => p.id !== projectId));
-    }
-  };
-
   const updateTaskStatus = (taskId: number, newStatus: ProjectStatus) => {
-    if (currentUser?.rol === 'ejecutor') return;
-
     setTareas(prev => prev.map(t => {
-      if (t.id === taskId) {
-        if (newStatus === 'finalizado') {
-          const pending = actividades.filter(a => a.id_tarea === taskId && !a.cumplida);
-          if (pending.length > 0) {
-            alert("No se puede finalizar la tarea: tiene actividades pendientes.");
-            return t;
-          }
+        if (t.id === taskId) {
+            const updates: Partial<Tarea> = { estado: newStatus };
+            if (newStatus === 'FINALIZADA' && !t.fecha_real_fin) {
+                updates.fecha_real_fin = new Date().toISOString();
+            } else if (newStatus !== 'FINALIZADA' && t.fecha_real_fin) {
+                updates.fecha_real_fin = undefined;
+            }
+            return { ...t, ...updates };
         }
-        const update: Partial<Tarea> = { estado: newStatus };
-        if (newStatus === 'wip' && !t.fecha_real_inicio) update.fecha_real_inicio = new Date().toISOString();
-        if (newStatus === 'finalizado' && !t.fecha_real_fin) update.fecha_real_fin = new Date().toISOString();
-        return { ...t, ...update };
-      }
-      return t;
+        return t;
     }));
+  };
+
+  const updateTaskDates = (taskId: number, updates: Partial<Tarea>) => {
+    setTareas(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
   };
 
   const addActivity = (taskId: number, nombre: string) => {
@@ -155,23 +114,27 @@ export default function App() {
       id: Date.now(),
       id_tarea: taskId,
       nombre,
-      estado: 'deck',
-      cumplida: false,
+      estado: 'DECK',
+      isStarted: false,
+      isCompleted: false,
       fecha_creacion: new Date().toISOString()
     };
     setActividades(prev => [...prev, newActivity]);
   };
 
-  const toggleActivity = (activityId: number) => {
+  const toggleActivity = (activityId: number, field: 'isStarted' | 'isCompleted') => {
     setActividades(prev => prev.map(a => {
       if (a.id === activityId) {
-        const isFinishing = !a.cumplida;
-        return { 
-          ...a, 
-          cumplida: isFinishing, 
-          estado: isFinishing ? 'finalizado' : 'wip',
-          fecha_finalizacion: isFinishing ? new Date().toISOString() : undefined
-        };
+        const newVal = !a[field];
+        const update: Partial<Actividad> = { [field]: newVal };
+        
+        if (field === 'isStarted' && newVal) update.fecha_inicio = new Date().toISOString();
+        if (field === 'isCompleted') {
+            update.fecha_finalizacion = newVal ? new Date().toISOString() : undefined;
+            update.estado = newVal ? 'FINALIZADA' : (a.isStarted ? 'WIP' : 'DECK');
+        }
+        
+        return { ...a, ...update };
       }
       return a;
     }));
@@ -197,8 +160,8 @@ export default function App() {
           <ProjectList 
             proyectos={proyectos} 
             users={users} 
-            onAddProject={addProject} 
-            onDeleteProject={deleteProject} 
+            onAddProject={(p) => setProyectos([...proyectos, {...p, id: Date.now(), estado: 'DECK', fecha_creacion: new Date().toISOString()}])} 
+            onDeleteProject={(id) => setProyectos(proyectos.filter(p => p.id !== id))} 
           />
         )}
         {activeTab === 'tareas' && (
@@ -209,6 +172,7 @@ export default function App() {
             users={users} 
             onAddTask={addTask}
             onUpdateTaskStatus={updateTaskStatus}
+            onUpdateTaskDates={updateTaskDates}
             onAddActivity={addActivity}
             onToggleActivity={toggleActivity}
           />

@@ -1,6 +1,6 @@
 
 export type Role = 'administrador' | 'gerente_proyecto' | 'gerente_tarea' | 'lider_integracion' | 'ejecutor';
-export type ProjectStatus = 'deck' | 'wip' | 'frozen' | 'finalizado';
+export type ProjectStatus = 'DECK' | 'FROZEN' | 'WIP' | 'FINALIZADA';
 export type LineaNegocio = 'Aeropuertos' | 'Logística' | 'Cartón';
 export type Disciplina = 'Ingeniería de Software' | 'Ingeniería de Automation y Control' | 'Ingeniería Mecánica';
 
@@ -45,7 +45,8 @@ export interface Actividad {
   id_tarea: number;
   nombre: string;
   estado: ProjectStatus;
-  cumplida: boolean;
+  isStarted: boolean;
+  isCompleted: boolean;
   fecha_creacion: string;
   fecha_inicio?: string;
   fecha_finalizacion?: string;

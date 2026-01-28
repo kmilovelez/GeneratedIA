@@ -1,16 +1,26 @@
 
 import { ProjectStatus, Role } from '../types/index';
-import { Building2, Truck, Factory } from 'lucide-react';
+import { Building2, Truck, Factory, Layers, PauseCircle, PlayCircle, CheckCircle2 } from 'lucide-react';
 
 export const formatDate = (date: string | undefined) => date ? new Date(date).toLocaleDateString() : '-';
 
 export const getStatusColor = (status: ProjectStatus) => {
   switch (status) {
-    case 'deck': return 'bg-slate-100 text-slate-600 border-slate-200';
-    case 'wip': return 'bg-blue-100 text-blue-600 border-blue-200';
-    case 'frozen': return 'bg-cyan-100 text-cyan-600 border-cyan-200';
-    case 'finalizado': return 'bg-green-100 text-green-600 border-green-200';
+    case 'DECK': return 'bg-blue-100 text-blue-600 border-blue-200';
+    case 'WIP': return 'bg-amber-100 text-amber-600 border-amber-200';
+    case 'FROZEN': return 'bg-slate-100 text-slate-500 border-slate-200';
+    case 'FINALIZADA': return 'bg-green-100 text-green-600 border-green-200';
     default: return 'bg-slate-100 text-slate-600';
+  }
+};
+
+export const getStatusIcon = (status: ProjectStatus) => {
+  switch (status) {
+    case 'DECK': return Layers;
+    case 'WIP': return PlayCircle;
+    case 'FROZEN': return PauseCircle;
+    case 'FINALIZADA': return CheckCircle2;
+    default: return Layers;
   }
 };
 

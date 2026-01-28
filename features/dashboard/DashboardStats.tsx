@@ -11,7 +11,7 @@ interface DashboardStatsProps {
 }
 
 export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, actividades, alertas }) => {
-  const finishedTasks = tareas.filter(t => t.estado === 'finalizado');
+  const finishedTasks = tareas.filter(t => t.estado === 'FINALIZADA');
   
   // Cumplimiento en Fecha
   const tasksOnTime = finishedTasks.filter(t => {
@@ -32,13 +32,13 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
   // Cumplimiento Diario (Actividades de hoy)
   const todayStr = new Date().toISOString().split('T')[0];
   const dailyActivities = actividades.filter(a => a.fecha_creacion.startsWith(todayStr));
-  const finishedDaily = dailyActivities.filter(a => a.cumplida).length;
+  const finishedDaily = dailyActivities.filter(a => a.isCompleted).length;
   const totalCumplimientoDiario = dailyActivities.length > 0 ? Math.round((finishedDaily / dailyActivities.length) * 100) : 0;
 
   const statsByDiscipline = INITIAL_DISCIPLINAS.map(d => {
     const disciplineTasks = tareas.filter(t => t.id_disciplina === d.id);
-    const wipProjectsCount = new Set(disciplineTasks.filter(t => t.estado === 'wip').map(t => t.id_proyecto)).size;
-    const deckProjectsCount = new Set(disciplineTasks.filter(t => t.estado === 'deck').map(t => t.id_proyecto)).size;
+    const wipProjectsCount = new Set(disciplineTasks.filter(t => t.estado === 'WIP').map(t => t.id_proyecto)).size;
+    const deckProjectsCount = new Set(disciplineTasks.filter(t => t.estado === 'DECK').map(t => t.id_proyecto)).size;
     
     return {
       name: d.nombre,
