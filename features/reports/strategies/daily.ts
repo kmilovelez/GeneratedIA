@@ -1,16 +1,44 @@
-
-import { Proyecto, Tarea, Actividad } from '../../../types/index';
+import { Proyecto, Tarea, Actividad, User } from '../../../types/index';
 import { formatDate } from '../../../lib/utils';
 
-export const getDailyData = (proyectos: Proyecto[], tareas: Tarea[], actividades: Actividad[]) => {
+/**
+ * Genera los datos para el reporte de Cumplimiento Diario.
+ * Cruza Actividad -> Tarea -> Proyecto para dar contexto total.
+ */
+export const getDailyData = (
+  proyectos: Proyecto[], 
+  tareas: Tarea[], 
+  actividades: Actividad[], 
+  users: User[]
+) => {
   return actividades.map(a => {
-    const t = tareas.find(ta => ta.id === a.id_tarea);
+    // Lookup de Tarea
+    const tareaMadre = tareas.find(t => t.id === a.id_tarea);
+    
+    // Lookup de Proyecto (usando la tarea encontrada)
+    const proyectoVinculado = proyectos.find(p => p.id === tareaMadre?.id_proyecto);
+    
+    // Lookup de Responsable (ejecutor de la tarea)
+    const responsable = users.find(u => u.id === tareaMadre?.id_ejecutor);
+    
+    // Determinación de estado textual de la actividad
+    const estadoActividad = a.isCompleted ? 'FINALIZADA' : (a.isStarted ? 'WIP' : 'DECK');
+
+    // El orden de las llaves define el orden de las columnas en la UI
     return {
-      'Fecha Registro': formatDate(a.fecha_creacion),
+      'OT': proyectoVinculado?.ot || 'N/A',
+      'Proyecto': proyectoVinculado?.nombre || 'N/A',
       'Actividad': a.nombre,
-      'Tarea': t?.nombre || 'N/A',
-      'Proyecto': proyectos.find(p => p.id === t?.id_proyecto)?.nombre || 'N/A',
+      'Responsable': responsable?.nombre || 'Sin Asignar',
+      'Estado': estadoActividad,
+      'Fecha Registro': formatDate(a.fecha_creacion),
+      'Tarea Madre': tareaMadre?.nombre || 'N/A',
       'Cumplida': a.isCompleted ? 'SÍ' : 'NO'
     };
-  }).sort((a,b) => new Date(b['Fecha Registro']).getTime() - new Date(a['Fecha Registro']).getTime());
+  }).sort((a, b) => {
+    // Ordenar por fecha de registro descendente
+    const dateA = new Date(a['Fecha Registro']).getTime();
+    const dateB = new Date(b['Fecha Registro']).getTime();
+    return dateB - dateA;
+  });
 };

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Briefcase, Filter, Timer, CalendarCheck, CheckSquare, AlertTriangle } from 'lucide-react';
 import { Proyecto, Tarea, Actividad, Alerta, User } from '../../types/index';
@@ -40,8 +39,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ proyectos, tareas, act
   const [generating, setGenerating] = useState<boolean>(false);
   const [previewReport, setPreviewReport] = useState<{title: string, data: any[], type: string} | null>(null);
   
-  // Filters could be expanded in the future. Currently mainly used for Project Status.
-  const [filters, setFilters] = useState({ linea: 'all' });
+  // Filters for some reports
+  const [filters] = useState({ linea: 'all' });
 
   // Central Dispatcher for Report Logic
   const calculateReportData = (type: string) => {
@@ -55,7 +54,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ proyectos, tareas, act
       case 'cumplimiento_fecha':
         return getDeadlineData(proyectos, tareas, users);
       case 'cumplimiento_diario':
-        return getDailyData(proyectos, tareas, actividades);
+        // Enriquecemos con el listado de usuarios para identificar responsables
+        return getDailyData(proyectos, tareas, actividades, users);
       case 'alertas':
         return getAlertsData(alertas);
       default:
@@ -70,7 +70,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ proyectos, tareas, act
 
   const handleExport = async (reportId: string, title: string, format: ExportFormat) => {
     setGenerating(true);
-    // Simulate slight delay for UX feel (optional, but good for "generating..." state)
+    // Delay para feedback visual
     await new Promise(res => setTimeout(res, 500));
     
     const data = calculateReportData(reportId);
@@ -81,7 +81,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ proyectos, tareas, act
 
   return (
     <div className="space-y-6">
-      <header><h2 className="text-2xl font-bold text-slate-800">Centro de Reportes</h2></header>
+      <header>
+        <h2 className="text-2xl font-black text-slate-800 tracking-tight">Centro de Reportes</h2>
+        <p className="text-sm text-slate-500 font-medium">Análisis de datos y exportación estratégica</p>
+      </header>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {REPORT_DEFINITIONS.map(report => (
@@ -90,10 +93,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ proyectos, tareas, act
             id={report.id}
             title={report.title}
             icon={report.icon}
-            isGenerating={generating}
             onPreview={() => handlePreview(report.id, report.title)}
             onExportPdf={() => handleExport(report.id, report.title, 'PDF')}
             onExportExcel={() => handleExport(report.id, report.title, 'EXCEL')}
+            isGenerating={generating}
           />
         ))}
       </div>
