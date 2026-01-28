@@ -23,7 +23,7 @@ interface ReportsViewProps {
   tareas: Tarea[];
   actividades: Actividad[];
   alertas: Alerta[];
-  users: User[]; // <--- AGREGAR ESTO SI FALTA
+  users: User[];
 }
 
 // Definition of available reports
@@ -47,7 +47,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ proyectos, tareas, act
   const calculateReportData = (type: string) => {
     switch(type) {
       case 'proyectos':
-        return getProjectStatusData(proyectos, filters);
+        return getProjectStatusData(proyectos, tareas, filters);
       case 'alcance':
         return getScopeCreepData(proyectos, tareas, actividades);
       case 'duracion':
