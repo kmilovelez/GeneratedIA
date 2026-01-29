@@ -1,4 +1,3 @@
-
 import { Tarea, Actividad } from '../../../types/index';
 
 /**
@@ -9,6 +8,31 @@ export const getDaysDiff = (start: string, end: string): number => {
   const endDate = new Date(end);
   const diffTime = endDate.getTime() - startDate.getTime();
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+/**
+ * Función interna para filtrar tareas finalizadas dentro de un periodo específico.
+ * Se basa en la fecha_real_fin de la tarea.
+ */
+const getFinishedTasksByPeriod = (tareas: Tarea[], periodo: 'WEEK' | 'MONTH' | 'YTD'): Tarea[] => {
+  const now = new Date();
+  const finishedTasks = tareas.filter(t => t.estado === 'FINALIZADA' && t.fecha_real_fin);
+
+  return finishedTasks.filter(t => {
+    const finishDate = new Date(t.fecha_real_fin!);
+    switch (periodo) {
+      case 'WEEK':
+        const lastWeek = new Date();
+        lastWeek.setDate(now.getDate() - 7);
+        return finishDate >= lastWeek;
+      case 'MONTH':
+        return finishDate.getMonth() === now.getMonth() && finishDate.getFullYear() === now.getFullYear();
+      case 'YTD':
+        return finishDate.getFullYear() === now.getFullYear();
+      default:
+        return true;
+    }
+  });
 };
 
 /**
@@ -28,38 +52,42 @@ export const checkDurationCompliance = (tarea: Tarea): boolean => {
   const plannedDuration = getDaysDiff(pStart, pEnd);
   const realDuration = getDaysDiff(rStart, rEnd);
 
-  // La regla solicitada: (Planeada - Real) >= 0 es cumplimiento.
-  // Si da <= 0 y no son iguales, es incumplimiento (retraso).
   return (plannedDuration - realDuration) >= 0;
 };
 
 /**
- * Filtra y calcula el KPI de cumplimiento de duración por periodo.
- * Periodos: 'WEEK', 'MONTH', 'YTD'
+ * Verifica el cumplimiento de fecha de entrega de una tarea.
+ * Cumplimiento = (Fecha Real Fin <= Fecha Planeada Fin Actualizada)
+ */
+export const checkDateCompliance = (tarea: Tarea): boolean => {
+  const { fecha_planeada_fin_actualizada: pEnd, fecha_real_fin: rEnd } = tarea;
+  if (!pEnd || !rEnd) return false;
+
+  const plannedDate = new Date(pEnd).getTime();
+  const realDate = new Date(rEnd).getTime();
+
+  return realDate <= plannedDate;
+};
+
+/**
+ * Calcula el KPI de cumplimiento de duración por periodo.
  */
 export const calculateDurationComplianceKPI = (tareas: Tarea[], periodo: 'WEEK' | 'MONTH' | 'YTD'): number => {
-  const now = new Date();
-  const finishedTasks = tareas.filter(t => t.estado === 'FINALIZADA' && t.fecha_real_fin);
-
-  const filteredTasks = finishedTasks.filter(t => {
-    const finishDate = new Date(t.fecha_real_fin!);
-    switch (periodo) {
-      case 'WEEK':
-        const lastWeek = new Date();
-        lastWeek.setDate(now.getDate() - 7);
-        return finishDate >= lastWeek;
-      case 'MONTH':
-        return finishDate.getMonth() === now.getMonth() && finishDate.getFullYear() === now.getFullYear();
-      case 'YTD':
-        return finishDate.getFullYear() === now.getFullYear();
-      default:
-        return true;
-    }
-  });
-
+  const filteredTasks = getFinishedTasksByPeriod(tareas, periodo);
   if (filteredTasks.length === 0) return 0;
 
   const compliantCount = filteredTasks.filter(t => checkDurationCompliance(t)).length;
+  return Math.round((compliantCount / filteredTasks.length) * 100);
+};
+
+/**
+ * Calcula el KPI de cumplimiento en fecha por periodo.
+ */
+export const calculateDateComplianceKPI = (tareas: Tarea[], periodo: 'WEEK' | 'MONTH' | 'YTD'): number => {
+  const filteredTasks = getFinishedTasksByPeriod(tareas, periodo);
+  if (filteredTasks.length === 0) return 0;
+
+  const compliantCount = filteredTasks.filter(t => checkDateCompliance(t)).length;
   return Math.round((compliantCount / filteredTasks.length) * 100);
 };
 
