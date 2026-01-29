@@ -1,10 +1,13 @@
+
 import { PublicClientApplication, EventType, LogLevel } from "@azure/msal-browser";
 
-// IMPORTANTE: Reemplaza 'ENTER_YOUR_CLIENT_ID' con el ID de tu App Registration en Azure Portal
+// Configuración de autenticación para Azure AD / Microsoft Entra ID
 export const msalConfig = {
     auth: {
-        clientId: "ENTER_YOUR_CLIENT_ID", // Ejemplo: "a1b2c3d4-e5f6-..."
-        authority: "https://login.microsoftonline.com/common", // O tu Tenant ID específico
+        // Intenta leer de process.env o usa el valor hardcoded como fallback
+        clientId: process.env.AZURE_CLIENT_ID || "004400b9-4b4d-4735-a577-5745254a9988",
+        // 'common' para multi-tenant, o el GUID del Tenant específico para single-tenant
+        authority: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID || "common"}`,
         redirectUri: window.location.origin,
     },
     cache: {
@@ -34,19 +37,16 @@ export const msalConfig = {
             },
             logLevel: LogLevel.Error
         },
-        // Aumentamos los timeouts para prevenir errores en redes lentas o equipos con bajo rendimiento
-        windowHashTimeout: 15000, // Tiempo de espera para procesar el hash de la URL
+        windowHashTimeout: 15000,
         iframeHashTimeout: 10000,
-        loadFrameTimeout: 15000, // Tiempo de espera para cargar frames de auth
-        allowNativeBroker: false // Deshabilitar broker nativo puede mejorar la compatibilidad en algunos navegadores
+        loadFrameTimeout: 15000,
+        allowNativeBroker: false
     }
 };
 
 export const msalInstance = new PublicClientApplication(msalConfig);
 
-// Exportamos la promesa de inicialización para que App.tsx pueda esperarla
 export const msalInitPromise = msalInstance.initialize().then(() => {
-    // Solo después de inicializar podemos llamar a otros métodos
     if (!msalInstance.getActiveAccount() && msalInstance.getAllAccounts().length > 0) {
         msalInstance.setActiveAccount(msalInstance.getAllAccounts()[0]);
     }
