@@ -24,33 +24,32 @@ export interface Proyecto {
 export interface Tarea {
   id: number;
   id_proyecto: number;
-  id_disciplina: number;
-  nombre: string;
-  id_ejecutor: number;
+  ID_Disciplina: string; // SharePoint Column: ID_Disciplina (String)
+  nombre: string; // SharePoint Column: Title
+  ID_Ejecutor: string; // SharePoint Column: ID_Ejecutor (String/Email)
   id_gerente_tarea: number;
   estado: ProjectStatus;
-  fecha_planeada_inicio_original: string;
-  fecha_planeada_fin_original: string;
-  fecha_planeada_inicio_actualizada: string;
-  fecha_planeada_fin_actualizada: string;
-  fecha_esperada_inicio?: string;
-  fecha_esperada_fin?: string;
-  fecha_real_inicio?: string;
-  fecha_real_fin?: string;
-  razon_retraso?: string;
+  FPlaneadaInicioOrig: string; // SharePoint Column: FPlaneadaInicioOrig
+  FPlaneadaFinOrig: string; // SharePoint Column: FPlaneadaFinOrig
+  FPlaneadaInicioAct: string; // SharePoint Column: FPlaneadaInicioAct
+  FPlaneadaFinAct: string; // SharePoint Column: FPlaneadaFinAct
+  FRealInicio?: string; // SharePoint Column: FRealInicio
+  FRealFin?: string; // SharePoint Column: FRealFin
+  RazonRetraso?: string; // SharePoint Column: RazonRetraso
+  OT: string; // SharePoint Column: OT
   fecha_creacion: string;
 }
 
 export interface Actividad {
   id: number;
-  id_tarea: number;
+  ID_Tarea: number; // Vínculo con el ID de la lista Tareas
   nombre: string;
   estado: ProjectStatus;
-  isStarted: boolean;
-  isCompleted: boolean;
+  IsStarted: boolean; // SharePoint Column: IsStarted (Boolean)
+  IsCompleted: boolean; // SharePoint Column: IsCompleted (Boolean)
   fecha_creacion: string;
-  fecha_inicio?: string;
-  fecha_finalizacion?: string;
+  FechaInicio?: string; // SharePoint Column: FechaInicio
+  FechaFinalizacion?: string; // SharePoint Column: FechaFinalizacion
   razon_no_cumplimiento?: string;
 }
 

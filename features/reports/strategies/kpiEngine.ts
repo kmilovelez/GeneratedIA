@@ -1,17 +1,20 @@
+
 import { Tarea, Actividad } from '../../../types/index';
 
 /**
- * Calcula la diferencia en días entre dos fechas.
+ * Calcula la diferencia en días entre dos fechas ISO strings.
  */
 export const getDaysDiff = (start: string, end: string): number => {
   const startDate = new Date(start);
   const endDate = new Date(end);
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return 0;
+  
   const diffTime = endDate.getTime() - startDate.getTime();
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
 /**
- * Función auxiliar genérica para filtrar entidades por periodos de tiempo (WEEK, MONTH, YTD).
+ * Filtra tareas finalizadas dentro de un periodo específico.
  */
 const filterByPeriod = <T>(entities: T[], dateField: keyof T, periodo: 'WEEK' | 'MONTH' | 'YTD'): T[] => {
   const now = new Date();
@@ -36,30 +39,14 @@ const filterByPeriod = <T>(entities: T[], dateField: keyof T, periodo: 'WEEK' | 
 };
 
 /**
- * Filtra tareas finalizadas dentro de un periodo específico.
- */
-const getFinishedTasksByPeriod = (tareas: Tarea[], periodo: 'WEEK' | 'MONTH' | 'YTD'): Tarea[] => {
-  const finishedTasks = tareas.filter(t => t.estado === 'FINALIZADA' && t.fecha_real_fin);
-  return filterByPeriod(finishedTasks, 'fecha_real_fin', periodo);
-};
-
-/**
- * Filtra actividades completadas dentro de un periodo específico.
- */
-export const getCompletedActivitiesByPeriod = (actividades: Actividad[], periodo: 'WEEK' | 'MONTH' | 'YTD'): Actividad[] => {
-  const completedActivities = actividades.filter(a => a.isCompleted && a.fecha_finalizacion);
-  return filterByPeriod(completedActivities, 'fecha_finalizacion', periodo);
-};
-
-/**
- * Verifica el cumplimiento de duración de una tarea.
+ * Verifica el cumplimiento de duración: Duración Real <= Duración Planeada Actualizada.
  */
 export const checkDurationCompliance = (tarea: Tarea): boolean => {
   const { 
-    fecha_planeada_inicio_actualizada: pStart, 
-    fecha_planeada_fin_actualizada: pEnd,
-    fecha_real_inicio: rStart,
-    fecha_real_fin: rEnd 
+    FPlaneadaInicioAct: pStart, 
+    FPlaneadaFinAct: pEnd,
+    FRealInicio: rStart,
+    FRealFin: rEnd 
   } = tarea;
 
   if (!pStart || !pEnd || !rStart || !rEnd) return false;
@@ -67,14 +54,14 @@ export const checkDurationCompliance = (tarea: Tarea): boolean => {
   const plannedDuration = getDaysDiff(pStart, pEnd);
   const realDuration = getDaysDiff(rStart, rEnd);
 
-  return (plannedDuration - realDuration) >= 0;
+  return realDuration <= plannedDuration;
 };
 
 /**
- * Verifica el cumplimiento de fecha de entrega de una tarea.
+ * Verifica el cumplimiento en fecha: Fecha Real Fin <= Fecha Planeada Fin Actualizada.
  */
 export const checkDateCompliance = (tarea: Tarea): boolean => {
-  const { fecha_planeada_fin_actualizada: pEnd, fecha_real_fin: rEnd } = tarea;
+  const { FPlaneadaFinAct: pEnd, FRealFin: rEnd } = tarea;
   if (!pEnd || !rEnd) return false;
 
   const plannedDate = new Date(pEnd).getTime();
@@ -84,51 +71,18 @@ export const checkDateCompliance = (tarea: Tarea): boolean => {
 };
 
 /**
- * Verifica el cumplimiento diario de una actividad.
- * Cumple si se inició y finalizó en exactamente 1 día de diferencia.
+ * Verifica el cumplimiento diario: Se espera que una actividad operativa se complete el mismo día o en 24h.
  */
 export const checkDailyCompliance = (actividad: Actividad): boolean => {
-  const { fecha_inicio, fecha_finalizacion } = actividad;
-  if (!fecha_inicio || !fecha_finalizacion) return false;
+  const { FechaInicio: start, FechaFinalizacion: end } = actividad;
+  if (!start || !end) return false;
   
-  return getDaysDiff(fecha_inicio, fecha_finalizacion) === 1;
+  // En KPIs operativos, consideramos cumplimiento si rDuracion <= 1 día
+  return getDaysDiff(start, end) <= 1;
 };
 
 /**
- * Calcula el KPI de cumplimiento de duración por periodo.
- */
-export const calculateDurationComplianceKPI = (tareas: Tarea[], periodo: 'WEEK' | 'MONTH' | 'YTD'): number => {
-  const filteredTasks = getFinishedTasksByPeriod(tareas, periodo);
-  if (filteredTasks.length === 0) return 0;
-
-  const compliantCount = filteredTasks.filter(t => checkDurationCompliance(t)).length;
-  return Math.round((compliantCount / filteredTasks.length) * 100);
-};
-
-/**
- * Calcula el KPI de cumplimiento en fecha por periodo.
- */
-export const calculateDateComplianceKPI = (tareas: Tarea[], periodo: 'WEEK' | 'MONTH' | 'YTD'): number => {
-  const filteredTasks = getFinishedTasksByPeriod(tareas, periodo);
-  if (filteredTasks.length === 0) return 0;
-
-  const compliantCount = filteredTasks.filter(t => checkDateCompliance(t)).length;
-  return Math.round((compliantCount / filteredTasks.length) * 100);
-};
-
-/**
- * Calcula el KPI de cumplimiento diario por periodo para actividades.
- */
-export const calculateDailyComplianceKPI = (actividades: Actividad[], periodo: 'WEEK' | 'MONTH' | 'YTD'): number => {
-  const filteredActivities = getCompletedActivitiesByPeriod(actividades, periodo);
-  if (filteredActivities.length === 0) return 0;
-
-  const compliantCount = filteredActivities.filter(a => checkDailyCompliance(a)).length;
-  return Math.round((compliantCount / filteredActivities.length) * 100);
-};
-
-/**
- * Calcula el porcentaje de progreso global basado en tareas finalizadas.
+ * KPI de Progreso Global.
  */
 export const calculateProjectProgress = (tareas: Tarea[]): number => {
   if (!tareas || tareas.length === 0) return 0;
@@ -137,12 +91,12 @@ export const calculateProjectProgress = (tareas: Tarea[]): number => {
 };
 
 /**
- * Calcula un índice de eficiencia basado en actividades completadas vs iniciadas.
+ * Índice de Eficiencia Operativa (Actividades finalizadas vs iniciadas).
  */
 export const calculateResourceEfficiency = (actividades: Actividad[]): number => {
   if (!actividades || actividades.length === 0) return 0;
-  const startedCount = actividades.filter(a => a.isStarted).length;
+  const startedCount = actividades.filter(a => a.IsStarted).length;
   if (startedCount === 0) return 0;
-  const completedCount = actividades.filter(a => a.isCompleted).length;
+  const completedCount = actividades.filter(a => a.IsCompleted).length;
   return Math.round((completedCount / startedCount) * 100);
 };

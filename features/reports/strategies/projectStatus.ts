@@ -25,7 +25,8 @@ export const getProjectStatusData = (proyectos: Proyecto[], tareas: Tarea[], fil
       const projectTasks = tareas.filter(t => t.id_proyecto === p.id);
       
       const getDisciplineStatus = (disciplineId: number): ProjectStatus => {
-        const dTasks = projectTasks.filter(t => t.id_disciplina === disciplineId);
+        // Fix: Use ID_Disciplina (string) and compare with string version of disciplineId
+        const dTasks = projectTasks.filter(t => t.ID_Disciplina === disciplineId.toString());
         const taskStatuses = dTasks.map(t => t.estado);
         return calculateStatusPriority(taskStatuses);
       };
