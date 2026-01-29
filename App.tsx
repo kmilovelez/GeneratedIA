@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 
 import { Sidebar } from './layout/Sidebar';
@@ -12,8 +11,11 @@ import { ImportView } from './features/admin/ImportView';
 
 import { User, Proyecto, Tarea, Actividad, Alerta, ProjectStatus } from './types/index';
 import { DEFAULT_USERS } from './lib/utils';
+import { msalInstance, msalInitPromise } from './config/auth';
+import { getTasksFromSharePoint, updateActivityInSharePoint } from './services/microsoftGraph';
 
 export default function App() {
+  const [isMsAuthenticated, setIsMsAuthenticated] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'proyectos' | 'tareas' | 'reportes' | 'admin' | 'import'>('dashboard');
@@ -22,58 +24,122 @@ export default function App() {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [msalReady, setMsalReady] = useState<boolean>(false);
+  const [isInteracting, setIsInteracting] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  // Load Data
+  // Verificación inicial de sesión de Microsoft tras inicialización
   useEffect(() => {
-    const saved = localStorage.getItem('gestor_recursos_data');
-    if (saved) {
-      const data = JSON.parse(saved);
-      if (data.users) setUsers(data.users);
-      setProyectos(data.proyectos || []);
-      setTareas(data.tareas || []);
-      setActividades(data.actividades || []);
-      setAlertas(data.alertas || []);
-    } else {
-      const yesterday = new Date(Date.now() - 86400000);
-
-      const mockProjects: Proyecto[] = [
-        { id: 1, nombre: 'Modernización Terminal A', ot: 'OT-1001', id_linea_negocio: 1, id_gerente_proyecto: 2, estado: 'WIP', fecha_creacion: yesterday.toISOString() },
-        { id: 2, nombre: 'Sistema Clasificación Logística', ot: 'OT-2005', id_linea_negocio: 2, id_gerente_proyecto: 2, estado: 'DECK', fecha_creacion: yesterday.toISOString() },
-      ];
-      const mockTasks: Tarea[] = [
-        { 
-          id: 1, id_proyecto: 1, id_disciplina: 1, nombre: 'Desarrollo API Central', 
-          id_ejecutor: 4, id_gerente_tarea: 3, estado: 'WIP',
-          fecha_planeada_inicio_original: '2024-03-01', fecha_planeada_fin_original: '2024-03-30',
-          fecha_planeada_inicio_actualizada: '2024-03-01', fecha_planeada_fin_actualizada: '2024-03-30',
-          fecha_esperada_inicio: '2024-03-05', fecha_esperada_fin: '2024-04-05',
-          fecha_real_inicio: yesterday.toISOString(),
-          fecha_creacion: yesterday.toISOString()
+    msalInitPromise.then(async () => {
+      try {
+        // handleRedirectPromise resuelve cualquier interacción pendiente (especialmente útil si hubo un refresh)
+        await msalInstance.handleRedirectPromise();
+        
+        setMsalReady(true);
+        const account = msalInstance.getActiveAccount();
+        if (account) {
+          setIsMsAuthenticated(true);
         }
-      ];
-      const mockActivities: Actividad[] = [
-        { id: 101, id_tarea: 1, nombre: 'Diseño de Base de Datos', estado: 'FINALIZADA', isStarted: true, isCompleted: true, fecha_creacion: yesterday.toISOString() },
-        { id: 102, id_tarea: 1, nombre: 'Configuración Servidor', estado: 'WIP', isStarted: true, isCompleted: false, fecha_creacion: yesterday.toISOString() }
-      ];
-      setProyectos(mockProjects);
-      setTareas(mockTasks);
-      setActividades(mockActivities);
-      
-      setAlertas([
-        { id: 1, tipo: 'retraso_inicio', id_tarea: 1, mensaje: 'La tarea "Desarrollo API Central" tiene un retraso de 3 días en su inicio planeado.', activa: true }
-      ]);
-    }
+      } catch (error) {
+        console.error("Error inicializando MSAL:", error);
+        setMsalReady(true); 
+      }
+    });
   }, []);
 
+  // Carga de datos desde SharePoint cuando está autenticado
   useEffect(() => {
-    if (proyectos.length > 0 || users.length > DEFAULT_USERS.length) {
-      localStorage.setItem('gestor_recursos_data', JSON.stringify({ users, proyectos, tareas, actividades, alertas }));
+    if (isMsAuthenticated && msalReady) {
+      loadDataFromSharePoint();
     }
-  }, [users, proyectos, tareas, actividades, alertas]);
+  }, [isMsAuthenticated, msalReady]);
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setActiveTab('dashboard');
+  const loadDataFromSharePoint = async () => {
+    setLoading(true);
+    try {
+      const saved = localStorage.getItem('gestor_recursos_data');
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.users) setUsers(data.users);
+        setProyectos(data.proyectos || []);
+        setTareas(data.tareas || []);
+        setActividades(data.actividades || []);
+        setAlertas(data.alertas || []);
+      } else {
+        const yesterday = new Date(Date.now() - 86400000).toISOString();
+        setProyectos([
+          { id: 1, nombre: 'Modernización Terminal A', ot: 'OT-1001', id_linea_negocio: 1, id_gerente_proyecto: 2, estado: 'WIP', fecha_creacion: yesterday },
+        ]);
+        setTareas([
+          { 
+            id: 1, id_proyecto: 1, id_disciplina: 1, nombre: 'Desarrollo API Central', 
+            id_ejecutor: 4, id_gerente_tarea: 3, estado: 'WIP',
+            fecha_planeada_inicio_original: '2024-03-01', fecha_planeada_fin_original: '2024-03-30',
+            fecha_planeada_inicio_actualizada: '2024-03-01', fecha_planeada_fin_actualizada: '2024-03-30',
+            fecha_real_inicio: yesterday,
+            fecha_creacion: yesterday
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error("Error cargando datos de Microsoft:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMsLogin = async () => {
+    if (!msalReady || isInteracting) return;
+    
+    setIsInteracting(true);
+    setAuthError(null);
+    try {
+      const loginRequest = {
+        scopes: ["User.Read", "Sites.Read.All"],
+        prompt: "select_account"
+      };
+      
+      const result = await msalInstance.loginPopup(loginRequest);
+      if (result) {
+        msalInstance.setActiveAccount(result.account);
+        setIsMsAuthenticated(true);
+      }
+    } catch (error: any) {
+      let errorMessage = "Ocurrió un error inesperado durante el inicio de sesión.";
+      
+      if (error.name === "BrowserAuthError" && error.message.includes("timed_out")) {
+        errorMessage = "La solicitud de inicio de sesión expiró. Por favor, comprueba tu conexión y vuelve a intentarlo.";
+      } else if (error.name === "InteractionInProgressHandler") {
+        errorMessage = "Una interacción ya está en curso en otra ventana.";
+      } else if (error.name === "BrowserAuthError" && error.message.includes("user_cancelled")) {
+        errorMessage = "Inicio de sesión cancelado por el usuario.";
+      }
+      
+      console.error("Error en el login de Microsoft:", error);
+      setAuthError(errorMessage);
+    } finally {
+      setIsInteracting(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (!msalReady || isInteracting) return;
+    
+    setIsInteracting(true);
+    try {
+      setCurrentUser(null);
+      setIsMsAuthenticated(false);
+      await msalInstance.logoutPopup({
+        postLogoutRedirectUri: window.location.origin,
+        mainWindowRedirectUri: window.location.origin
+      });
+      setActiveTab('dashboard');
+    } catch (error) {
+      console.error("Error en el logout de Microsoft:", error);
+    } finally {
+      setIsInteracting(false);
+    }
   };
 
   const handleLogin = (user: User) => {
@@ -136,6 +202,7 @@ export default function App() {
         if (field === 'isCompleted') {
             update.fecha_finalizacion = newVal ? new Date().toISOString() : undefined;
             update.estado = newVal ? 'FINALIZADA' : (a.isStarted ? 'WIP' : 'DECK');
+            if (msalReady) updateActivityInSharePoint(a.id, update);
         }
         
         return { ...a, ...update };
@@ -144,12 +211,71 @@ export default function App() {
     }));
   };
 
+  if (!msalReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!isMsAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-100 p-6">
+        <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-12 text-center space-y-8 border border-slate-100">
+          <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto shadow-xl transform rotate-3">
+            <span className="text-white font-black text-4xl">R</span>
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-slate-800 tracking-tight">Bienvenido</h1>
+            <p className="text-slate-500 mt-2 font-medium">Sistema de Gestión de KPIs Corporativo</p>
+          </div>
+          
+          {authError && (
+            <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-[11px] text-red-600 font-bold leading-relaxed animate-in slide-in-from-top-2">
+              {authError}
+            </div>
+          )}
+
+          <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 text-sm text-slate-600 leading-relaxed">
+            Para acceder a los tableros de control y cronogramas, por favor inicia sesión con tu cuenta de <strong>Office 365</strong>.
+          </div>
+          
+          <button 
+            disabled={isInteracting}
+            onClick={handleMsLogin}
+            className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl flex items-center justify-center gap-3 transition-all active:scale-95 ${
+              isInteracting 
+              ? 'bg-slate-400 cursor-not-allowed text-white shadow-none' 
+              : 'bg-slate-900 text-white shadow-slate-200 hover:bg-black'
+            }`}
+          >
+            {isInteracting ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <svg className="w-5 h-5" viewBox="0 0 23 23"><path fill="#f3f3f3" d="M0 0h11v11H0zM12 0h11v11H12zM0 12h11v11H0zM12 12h11v11H12z"/></svg>
+            )}
+            {isInteracting ? 'Procesando...' : 'Iniciar Sesión con Microsoft'}
+          </button>
+          
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Powered by Microsoft Graph API</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!currentUser) {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
+      {loading && (
+        <div className="fixed inset-0 z-[200] bg-white/80 backdrop-blur-md flex items-center justify-center flex-col gap-4">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-black text-blue-600 uppercase tracking-widest">Sincronizando con SharePoint...</p>
+        </div>
+      )}
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
