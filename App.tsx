@@ -36,7 +36,16 @@ export default function App() {
         await msalInstance.handleRedirectPromise();
         setMsalReady(true);
         const account = msalInstance.getActiveAccount();
-        if (account) setIsMsAuthenticated(true);
+        if (account) {
+            setIsMsAuthenticated(true);
+            // Si ya hay sesión activa recuperada, configuramos el usuario automáticamente
+            setCurrentUser({
+                id: 999,
+                nombre: account.name || "Usuario Microsoft",
+                email: account.username || "usuario@empresa.com",
+                rol: 'administrador' // Rol por defecto para usuarios MS
+            });
+        }
       } catch (error) {
         console.error("Error inicializando MSAL:", error);
         setMsalReady(true); 
@@ -155,6 +164,17 @@ export default function App() {
       if (result) {
         msalInstance.setActiveAccount(result.account);
         setIsMsAuthenticated(true);
+        
+        // Creamos el usuario basado en la cuenta de Microsoft
+        setCurrentUser({
+            id: 999, // ID temporal
+            nombre: result.account.name || "Usuario Microsoft",
+            email: result.account.username || "usuario@empresa.com",
+            rol: 'administrador' // Asignamos rol admin por defecto al dueño de la cuenta
+        });
+
+        // REDIRECCIÓN: Forzamos ir al Dashboard
+        setActiveTab('dashboard');
       }
     } catch (error: any) {
       console.error("Error en login:", error);
@@ -172,21 +192,43 @@ export default function App() {
     } finally { setIsInteracting(false); }
   };
 
+  // 1. Cargando SDK
   if (!msalReady) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div></div>;
 
+  // 2. Pantalla de Login Microsoft (Si no está autenticado)
   if (!isMsAuthenticated) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100 p-6">
       <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-12 text-center space-y-8 border border-slate-100">
         <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto shadow-xl"><span className="text-white font-black text-4xl">R</span></div>
         <h1 className="text-3xl font-black text-slate-800 tracking-tight">Bienvenido</h1>
+        <p className="text-slate-500 font-medium">Inicia sesión con tu cuenta corporativa para acceder a los recursos compartidos.</p>
         {authError && <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-xs font-bold">{authError}</div>}
-        <button onClick={handleMsLogin} disabled={isInteracting} className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] bg-slate-900 text-white hover:bg-black transition-all">Iniciar Sesión con Microsoft</button>
+        <button onClick={handleMsLogin} disabled={isInteracting} className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] bg-slate-900 text-white hover:bg-black transition-all shadow-xl shadow-slate-200">
+            {isInteracting ? 'Conectando...' : 'Iniciar Sesión con Microsoft'}
+        </button>
+        
+        <div className="relative py-4">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
+            <div className="relative flex justify-center"><span className="bg-white px-4 text-xs text-slate-400 font-bold uppercase tracking-widest">O modo local</span></div>
+        </div>
+
+        {/* Botón discreto para modo demo si falla MS */}
+        <button onClick={() => setIsMsAuthenticated(true)} className="text-xs font-bold text-slate-400 hover:text-blue-600 transition">
+            Entrar en Modo Demostración
+        </button>
       </div>
     </div>
   );
 
-  if (!currentUser) return <LoginScreen onLogin={setCurrentUser} />;
+  // 3. Selección de Usuario Demo (Solo si estamos en modo Demo y no se ha seteado usuario automáticamente)
+  if (!currentUser) return (
+      <LoginScreen onLogin={(user) => { 
+          setCurrentUser(user); 
+          setActiveTab('dashboard'); // REDIRECCIÓN: Forzamos ir al Dashboard
+      }} />
+  );
 
+  // 4. App Principal
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {loading && <div className="fixed inset-0 z-[200] bg-white/80 backdrop-blur-md flex items-center justify-center flex-col gap-4"><div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div><p className="text-xs font-black text-blue-600 uppercase tracking-widest">Sincronizando...</p></div>}
