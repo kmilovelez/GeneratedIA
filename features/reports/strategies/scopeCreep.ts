@@ -6,8 +6,7 @@ export const getScopeCreepData = (proyectos: Proyecto[], tareas: Tarea[], activi
   const growth: any[] = [];
   
   tareas.forEach(t => {
-    // Fix: Use ID_Tarea instead of id_tarea to match types/index.ts
-    const taskActs = actividades.filter(a => a.ID_Tarea === t.id);
+    const taskActs = actividades.filter(a => a.id_tarea === t.id);
     
     // Lógica de negocio: Actividades creadas más de 1 minuto después de la tarea
     const extraActs = taskActs.filter(a => {

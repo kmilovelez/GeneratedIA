@@ -8,27 +8,21 @@ import { checkDateCompliance } from './kpiEngine';
  */
 export const getDeadlineData = (proyectos: Proyecto[], tareas: Tarea[], users: User[]) => {
   return tareas
-    // Fix: Use FRealFin instead of fecha_real_fin
-    .filter(t => t.estado === 'FINALIZADA' && t.FRealFin)
+    .filter(t => t.estado === 'FINALIZADA' && t.fecha_real_fin)
     .map(t => {
-      // Fix: Use FPlaneadaFinAct and FPlaneadaFinOrig
-      const planeada = new Date(t.FPlaneadaFinAct || t.FPlaneadaFinOrig).getTime();
-      // Fix: Use FRealFin
-      const real = new Date(t.FRealFin!).getTime();
+      const planeada = new Date(t.fecha_planeada_fin_actualizada || t.fecha_planeada_fin_original).getTime();
+      const real = new Date(t.fecha_real_fin!).getTime();
       const diff = Math.ceil((real - planeada) / (1000 * 60 * 60 * 24));
       
-      // Fix: Use ID_Ejecutor (string) and compare with stringified u.id
-      const responsable = users.find(u => u.id.toString() === t.ID_Ejecutor)?.nombre || 'Sin Asignar';
+      const responsable = users.find(u => u.id === t.id_ejecutor)?.nombre || 'Sin Asignar';
       const isCompliant = checkDateCompliance(t);
 
       return {
         'Tarea': t.nombre,
         'Proyecto': proyectos.find(p => p.id === t.id_proyecto)?.nombre || 'N/A',
         'Responsable': responsable,
-        // Fix: Use FPlaneadaFinAct or FPlaneadaFinOrig
-        'Fecha Planeada': formatDate(t.FPlaneadaFinAct || t.FPlaneadaFinOrig),
-        // Fix: Use FRealFin
-        'Fecha Real': formatDate(t.FRealFin),
+        'Fecha Planeada': formatDate(t.fecha_planeada_fin_actualizada || t.fecha_planeada_fin_original),
+        'Fecha Real': formatDate(t.fecha_real_fin),
         'Desviación (Días)': diff > 0 ? `+${diff}` : `${diff}`,
         'Estado': isCompliant ? 'A TIEMPO' : 'RETRASO'
       };

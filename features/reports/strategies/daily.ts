@@ -13,19 +13,16 @@ export const getDailyData = (
 ) => {
   return actividades.map(a => {
     // Lookup de Tarea
-    // Fix: Use ID_Tarea instead of id_tarea
-    const tareaMadre = tareas.find(t => t.id === a.ID_Tarea);
+    const tareaMadre = tareas.find(t => t.id === a.id_tarea);
     
     // Lookup de Proyecto (usando la tarea encontrada)
     const proyectoVinculado = proyectos.find(p => p.id === tareaMadre?.id_proyecto);
     
     // Lookup de Responsable (ejecutor de la tarea)
-    // Fix: Use ID_Ejecutor (string) and compare with stringified u.id
-    const responsable = users.find(u => u.id.toString() === tareaMadre?.ID_Ejecutor);
+    const responsable = users.find(u => u.id === tareaMadre?.id_ejecutor);
     
     // Determinación de estado textual de la actividad
-    // Fix: Use IsCompleted and IsStarted (PascalCase)
-    const estadoActividad = a.IsCompleted ? 'FINALIZADA' : (a.IsStarted ? 'WIP' : 'DECK');
+    const estadoActividad = a.isCompleted ? 'FINALIZADA' : (a.isStarted ? 'WIP' : 'DECK');
 
     // El orden de las llaves define el orden de las columnas en la UI
     return {
@@ -36,8 +33,7 @@ export const getDailyData = (
       'Estado': estadoActividad,
       'Fecha Registro': formatDate(a.fecha_creacion),
       'Tarea Madre': tareaMadre?.nombre || 'N/A',
-      // Fix: Use IsCompleted
-      'Cumplida': a.IsCompleted ? 'SÍ' : 'NO'
+      'Cumplida': a.isCompleted ? 'SÍ' : 'NO'
     };
   }).sort((a, b) => {
     // Ordenar por fecha de registro descendente

@@ -8,13 +8,10 @@ import { getDaysDiff, checkDurationCompliance } from './kpiEngine';
  */
 export const getDurationData = (tareas: Tarea[]) => {
   return tareas
-    // Fix: Use FRealFin and FRealInicio instead of fecha_real_fin and fecha_real_inicio
-    .filter(t => t.FRealFin && t.FRealInicio)
+    .filter(t => t.fecha_real_fin && t.fecha_real_inicio)
     .map(t => {
-      // Fix: Use FPlaneadaInicioAct and FPlaneadaFinAct
-      const pDays = getDaysDiff(t.FPlaneadaInicioAct, t.FPlaneadaFinAct);
-      // Fix: Use FRealInicio and FRealFin
-      const rDays = getDaysDiff(t.FRealInicio!, t.FRealFin!);
+      const pDays = getDaysDiff(t.fecha_planeada_inicio_actualizada, t.fecha_planeada_fin_actualizada);
+      const rDays = getDaysDiff(t.fecha_real_inicio!, t.fecha_real_fin!);
       
       const isCompliant = checkDurationCompliance(t);
       const deviation = rDays - pDays;
