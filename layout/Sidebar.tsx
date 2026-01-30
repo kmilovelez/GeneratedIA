@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { LayoutDashboard, Briefcase, CheckSquare, BarChart3, Settings, Upload, LogOut, Shield } from 'lucide-react';
+import { LayoutDashboard, Briefcase, CheckSquare, BarChart3, History, Settings, Upload, LogOut, Shield } from 'lucide-react';
 import { User } from '../types/index';
 
 interface SidebarProps {
   activeTab: string;
-  setActiveTab: (tab: 'dashboard' | 'proyectos' | 'tareas' | 'reportes' | 'admin' | 'import') => void;
+  setActiveTab: (tab: 'dashboard' | 'proyectos' | 'tareas' | 'reportes' | 'historicos' | 'admin' | 'import') => void;
   currentUser: User;
   onLogout: () => void;
 }
@@ -32,6 +32,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, curre
         </button>
         <button onClick={() => setActiveTab('reportes')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition ${activeTab === 'reportes' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}>
           <BarChart3 size={18} /> Reportes
+        </button>
+        <button onClick={() => setActiveTab('historicos')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition ${activeTab === 'historicos' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}>
+          <History size={18} /> Datos Históricos
         </button>
         <button onClick={() => setActiveTab('import')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition ${activeTab === 'import' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}>
           <Upload size={18} /> Importar Datos

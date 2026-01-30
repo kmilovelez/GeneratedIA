@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 
 import { Sidebar } from './layout/Sidebar';
@@ -6,6 +7,7 @@ import { DashboardStats } from './features/dashboard/DashboardStats';
 import { ProjectList } from './features/projects/ProjectList';
 import { DailyTasks } from './features/tasks/DailyTasks';
 import { ReportsView } from './features/reports/ReportsView';
+import { HistoricosView } from './features/historicos/HistoricosView';
 import { AdminView } from './features/admin/AdminView';
 import { ImportView } from './features/admin/ImportView';
 
@@ -15,7 +17,7 @@ import { DEFAULT_USERS } from './lib/utils';
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'proyectos' | 'tareas' | 'reportes' | 'admin' | 'import'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'proyectos' | 'tareas' | 'reportes' | 'historicos' | 'admin' | 'import'>('dashboard');
   
   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [tareas, setTareas] = useState<Tarea[]>([]);
@@ -188,6 +190,12 @@ export default function App() {
             actividades={actividades} 
             alertas={alertas}
             users={users} 
+          />
+        )}
+        {activeTab === 'historicos' && (
+          <HistoricosView 
+            tareas={tareas} 
+            actividades={actividades} 
           />
         )}
         {activeTab === 'import' && <ImportView />}
