@@ -4,7 +4,7 @@ import { checkDateCompliance } from './kpiEngine';
 
 /**
  * Genera los datos para el reporte de Cumplimiento en Fecha.
- * Utiliza checkDateCompliance para determinar el estado de forma consistente.
+ * Utiliza checkDateCompliance del motor central para garantizar consistencia.
  */
 export const getDeadlineData = (proyectos: Proyecto[], tareas: Tarea[], users: User[]) => {
   return tareas
@@ -12,9 +12,13 @@ export const getDeadlineData = (proyectos: Proyecto[], tareas: Tarea[], users: U
     .map(t => {
       const planeada = new Date(t.fecha_planeada_fin_actualizada || t.fecha_planeada_fin_original).getTime();
       const real = new Date(t.fecha_real_fin!).getTime();
+      
+      // Cálculo de desviación para visualización informativa en el reporte
       const diff = Math.ceil((real - planeada) / (1000 * 60 * 60 * 24));
       
       const responsable = users.find(u => u.id === t.id_ejecutor)?.nombre || 'Sin Asignar';
+      
+      // Aplicación de la regla de negocio centralizada
       const isCompliant = checkDateCompliance(t);
 
       return {

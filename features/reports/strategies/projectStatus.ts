@@ -1,22 +1,29 @@
-
 import { Proyecto, Tarea, ProjectStatus } from '../../../types/index';
 
 /**
- * Función pura que determina el estado resultante basado en una jerarquía de prioridades.
- * Jerarquía: WIP > FROZEN > FINALIZADA > DECK
+ * Determina el estado resultante de un conjunto de tareas basado en una jerarquía.
+ * Prioridad (Mayor a Menor): WIP > FROZEN > FINALIZADA > DECK
  */
 export const calculateStatusPriority = (statuses: ProjectStatus[]): ProjectStatus => {
   if (statuses.length === 0) return 'DECK';
+
+  const priorityOrder: ProjectStatus[] = ['WIP', 'FROZEN', 'FINALIZADA', 'DECK'];
   
-  if (statuses.includes('WIP')) return 'WIP';
-  if (statuses.includes('FROZEN')) return 'FROZEN';
-  if (statuses.every(s => s === 'FINALIZADA')) return 'FINALIZADA';
+  // Buscamos el primer estado de la jerarquía que esté presente en el conjunto
+  for (const status of priorityOrder) {
+    if (status === 'FINALIZADA') {
+      // Para FINALIZADA, todas deben estar finalizadas
+      if (statuses.every(s => s === 'FINALIZADA')) return 'FINALIZADA';
+      continue;
+    }
+    if (statuses.includes(status)) return status;
+  }
   
   return 'DECK';
 };
 
 /**
- * Genera los datos para el reporte de Estado de Proyectos con desglose por disciplina.
+ * Genera la matriz de estado de proyectos por disciplina.
  */
 export const getProjectStatusData = (proyectos: Proyecto[], tareas: Tarea[], filters: { linea: string }) => {
   return proyectos

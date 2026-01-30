@@ -66,6 +66,10 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
     setNewTaskForm({
       ...newTaskForm,
       nombre: '',
+      id_proyecto: proyectos[0]?.id || 1,
+      id_disciplina: 1,
+      id_ejecutor: users.find(u => u.rol === 'ejecutor')?.id || users[0].id,
+      id_gerente_tarea: users.find(u => u.rol === 'gerente_tarea')?.id || users[0].id,
       fecha_planeada_inicio_original: '',
       fecha_planeada_fin_original: '',
     });
@@ -96,7 +100,6 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
           <span className="text-[10px] font-black uppercase tracking-widest">Filtros</span>
         </div>
 
-        {/* Selector de Disciplina */}
         <div className="relative flex-1 min-w-[220px]">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
             <Layers size={14} />
@@ -113,7 +116,6 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
           </select>
         </div>
 
-        {/* Selector de Gerente de Tarea */}
         <div className="relative flex-1 min-w-[220px]">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
             <Users size={14} />
@@ -130,7 +132,6 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
           </select>
         </div>
 
-        {/* Botón de Limpiar */}
         {(filterDisciplina !== 'all' || filterGerente !== 'all') && (
           <button 
             onClick={resetFilters}
@@ -160,7 +161,6 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
             </div>
 
             <div className="space-y-6">
-              {/* Selector de Proyecto con OT */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-2">
                   <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest ml-1 flex items-center gap-2">
@@ -290,9 +290,10 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
 
           return (
             <div key={tarea.id} className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-2xl hover:shadow-slate-200/50 group/card">
-              {/* Card Header: Compactado para mejor legibilidad */}
-              <div className="p-4 bg-white border-b border-slate-50 flex flex-wrap items-center justify-between gap-3">
+              {/* Card Header Compactado */}
+              <div className="p-4 bg-white border-b border-slate-50 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {/* Botones de Estado Compactos */}
                   <div className="flex items-center gap-1 bg-slate-100/50 p-1 rounded-xl border border-slate-100 shrink-0">
                     {(['DECK', 'FROZEN', 'WIP'] as ProjectStatus[]).map((st) => {
                       const Icon = getStatusIcon(st);
@@ -317,32 +318,28 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
                     })}
                   </div>
                   
+                  {/* Badge de Iniciada Compacto */}
                   <div className="flex items-center gap-2 shrink-0">
                     {isStarted && (
                         <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-blue-50/50 text-blue-600 rounded-2xl border border-blue-100/50">
                             <PlayCircle size={12} className="animate-pulse" />
-                            <span className="text-[9px] font-black uppercase">INICIADA:</span>
-                            <span className="text-[9px] font-bold">{new Date(tarea.fecha_real_inicio!).toLocaleDateString()}</span>
+                            <span className="text-[9px] font-black uppercase">INICIADA: {new Date(tarea.fecha_real_inicio!).toLocaleDateString()}</span>
                         </div>
-                    )}
-                    
-                    {project && (
-                      <div className="hidden sm:block px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-bold text-[10px] shadow-sm border border-slate-200 whitespace-nowrap">
-                        OT: {project.ot}
-                      </div>
                     )}
                   </div>
 
-                  <div className="hidden lg:block flex-1 min-w-0 ml-2">
-                    <div className="flex items-center gap-3">
-                       <h3 className="font-black text-slate-800 text-base leading-tight tracking-tight group-hover/card:text-blue-600 transition-colors truncate">{tarea.nombre}</h3>
-                    </div>
+                  {/* Título: Formato [OT] - [Nombre] */}
+                  <div className="flex-1 min-w-0 ml-1">
+                    <h3 className="font-black text-slate-800 text-sm md:text-base leading-tight tracking-tight group-hover/card:text-blue-600 transition-colors truncate">
+                      <span className="text-slate-400 font-bold mr-1">[{project?.ot || 'N/A'}]</span> - {tarea.nombre}
+                    </h3>
                     <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.15em] mt-0.5 truncate">
                       {project?.nombre} • {INITIAL_DISCIPLINAS.find(d => d.id === tarea.id_disciplina)?.nombre}
                     </p>
                   </div>
                 </div>
 
+                {/* Botón FINALIZADA Compacto */}
                 <button
                     onClick={() => onUpdateTaskStatus(tarea.id, isFinished ? 'WIP' : 'FINALIZADA')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase transition-all tracking-widest shrink-0 ${
@@ -357,7 +354,7 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
               </div>
 
               <div className="flex flex-col md:grid md:grid-cols-12 divide-x divide-slate-100 h-full">
-                {/* Panel Izquierdo: Cronograma (Col 1-5) */}
+                {/* Panel Izquierdo: Cronograma */}
                 <div className="p-8 md:col-span-5 bg-white space-y-8">
                   <div className="flex items-center justify-between">
                     <h4 className="font-black text-[10px] text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2">
@@ -406,9 +403,8 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
                   </div>
                 </div>
 
-                {/* Panel Derecho: ACTIVIDADES (Col 6-12) */}
+                {/* Panel Derecho: ACTIVIDADES */}
                 <div className="p-8 md:col-span-7 bg-slate-50/50 flex flex-col h-full min-h-[450px]">
-                  {/* Header Actividades con Barra de Progreso */}
                   <div className="flex justify-between mb-8 items-center">
                     <div className="flex items-center gap-4">
                       <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm text-blue-600">
@@ -426,7 +422,6 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
                     </div>
                   </div>
 
-                  {/* Input de nueva actividad */}
                   <div className="flex gap-4 mb-8">
                     <div className="relative flex-1">
                       <input 
@@ -446,7 +441,6 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
                     </button>
                   </div>
 
-                  {/* Lista de actividades (Contenedor con scroll) */}
                   <div className="space-y-4 flex-1 overflow-y-auto pr-3 custom-scrollbar max-h-[550px]">
                     {taskActivities.length > 0 ? taskActivities.map(a => (
                       <div key={a.id} className="flex items-center justify-between p-5 bg-white border border-slate-100 rounded-[1.75rem] group/item hover:border-blue-200 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300">
@@ -457,29 +451,43 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
                         </div>
                         
                         <div className="flex items-center gap-3 shrink-0">
-                          {/* Botón Estado: INICIADA */}
+                          {/* Botón Estado: INICIADA con Reset en Cascada */}
                           <button
-                            onClick={() => onToggleActivity(a.id, 'isStarted')}
-                            className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 border-2 ${
+                            onClick={() => {
+                              if (a.isStarted && a.isCompleted) {
+                                onToggleActivity(a.id, 'isStarted');
+                                onToggleActivity(a.id, 'isCompleted');
+                              } else {
+                                onToggleActivity(a.id, 'isStarted');
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase transition-all flex items-center gap-1.5 border-2 ${
                                 a.isStarted 
                                 ? 'bg-amber-100 text-amber-700 border-amber-200 shadow-lg shadow-amber-50 scale-105' 
                                 : 'bg-white text-slate-300 border-slate-50 hover:border-amber-100 hover:text-amber-500 hover:bg-amber-50/30'
                             }`}
                           >
-                            <PlayCircle size={14} strokeWidth={3} className={a.isStarted ? 'animate-pulse' : ''} />
+                            <PlayCircle size={12} strokeWidth={3} className={a.isStarted ? 'animate-pulse' : ''} />
                             INICIADA
                           </button>
 
-                          {/* Botón Estado: FINALIZADA */}
+                          {/* Botón Estado: FINALIZADA con Validación de Flujo */}
                           <button
-                            onClick={() => onToggleActivity(a.id, 'isCompleted')}
-                            className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 border-2 ${
+                            onClick={() => {
+                              if (!a.isStarted && !a.isCompleted) {
+                                window.alert("Debe iniciar la actividad antes de finalizarla");
+                                return;
+                              }
+                              onToggleActivity(a.id, 'isCompleted');
+                            }}
+                            disabled={!a.isStarted && !a.isCompleted}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase transition-all flex items-center gap-1.5 border-2 ${
                                 a.isCompleted 
                                 ? 'bg-green-100 text-green-700 border-green-200 shadow-lg shadow-green-50 scale-105' 
-                                : 'bg-white text-slate-300 border-slate-50 hover:border-green-100 hover:text-green-600 hover:bg-green-50/30'
+                                : `bg-white text-slate-300 border-slate-50 hover:border-green-100 hover:text-green-600 hover:bg-green-50/30 ${!a.isStarted ? 'opacity-30 cursor-not-allowed' : ''}`
                             }`}
                           >
-                            <CheckCircle2 size={14} strokeWidth={3} />
+                            <CheckCircle2 size={12} strokeWidth={3} />
                             FINALIZADA
                           </button>
                         </div>
