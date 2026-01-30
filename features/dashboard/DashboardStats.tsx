@@ -15,12 +15,14 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [isDurationModalOpen, setIsDurationModalOpen] = useState(false);
   
-  const finishedTasks = tareas.filter(t => t.estado === 'FINALIZADA' && t.fecha_real_fin);
+  // Fix: Property name changed to FRealFin
+  const finishedTasks = tareas.filter(t => t.estado === 'FINALIZADA' && t.FRealFin);
   
   // KPI 1: Cumplimiento en Fecha
   const tasksOnTime = finishedTasks.filter(t => {
-    if (!t.fecha_real_fin || !t.fecha_planeada_fin_actualizada) return false;
-    return new Date(t.fecha_real_fin) <= new Date(t.fecha_planeada_fin_actualizada);
+    // Fix: Property names changed to FRealFin and FPlaneadaFinAct
+    if (!t.FRealFin || !t.FPlaneadaFinAct) return false;
+    return new Date(t.FRealFin) <= new Date(t.FPlaneadaFinAct);
   }).length;
   const totalCumplimientoFecha = finishedTasks.length > 0 ? Math.round((tasksOnTime / finishedTasks.length) * 100) : 0;
 
@@ -32,9 +34,10 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
 
   // KPI 3: Cumplimiento Duración
   const tasksInDuration = finishedTasks.filter(t => {
-    if (!t.fecha_real_inicio || !t.fecha_real_fin || !t.fecha_planeada_inicio_actualizada || !t.fecha_planeada_fin_actualizada) return false;
-    const plannedDays = (new Date(t.fecha_planeada_fin_actualizada).getTime() - new Date(t.fecha_planeada_inicio_actualizada).getTime());
-    const realDays = (new Date(t.fecha_real_fin).getTime() - new Date(t.fecha_real_inicio).getTime());
+    // Fix: Property names changed to match Tarea type
+    if (!t.FRealIni || !t.FRealFin || !t.FPlaneadaIniAct || !t.FPlaneadaFinAct) return false;
+    const plannedDays = (new Date(t.FPlaneadaFinAct).getTime() - new Date(t.FPlaneadaIniAct).getTime());
+    const realDays = (new Date(t.FRealFin).getTime() - new Date(t.FRealIni).getTime());
     return realDays <= plannedDays;
   }).length;
   const totalCumplimientoDuracion = finishedTasks.length > 0 ? Math.round((tasksInDuration / finishedTasks.length) * 100) : 0;
@@ -53,7 +56,8 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
   const complianceBreakdown = useMemo(() => {
     const calculatePct = (subset: Tarea[]) => {
       if (subset.length === 0) return 0;
-      const onTime = subset.filter(t => new Date(t.fecha_real_fin!) <= new Date(t.fecha_planeada_fin_actualizada)).length;
+      // Fix: Property names changed to FRealFin and FPlaneadaFinAct
+      const onTime = subset.filter(t => new Date(t.FRealFin!) <= new Date(t.FPlaneadaFinAct)).length;
       return Math.round((onTime / subset.length) * 100);
     };
 
@@ -62,9 +66,10 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
       return {
         id: d.id,
         nombre: d.nombre,
-        semana: calculatePct(disciplineTasks.filter(t => new Date(t.fecha_real_fin!) >= timeRefs.oneWeekAgo)),
-        mes: calculatePct(disciplineTasks.filter(t => new Date(t.fecha_real_fin!) >= timeRefs.startOfMonth)),
-        ytd: calculatePct(disciplineTasks.filter(t => new Date(t.fecha_real_fin!) >= timeRefs.startOfYear)),
+        // Fix: Property name changed to FRealFin
+        semana: calculatePct(disciplineTasks.filter(t => new Date(t.FRealFin!) >= timeRefs.oneWeekAgo)),
+        mes: calculatePct(disciplineTasks.filter(t => new Date(t.FRealFin!) >= timeRefs.startOfMonth)),
+        ytd: calculatePct(disciplineTasks.filter(t => new Date(t.FRealFin!) >= timeRefs.startOfYear)),
         count: disciplineTasks.length
       };
     });
@@ -80,8 +85,9 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
 
     return INITIAL_DISCIPLINAS.map(d => {
       // Filtrar actividades cuyas tareas pertenezcan a esta disciplina
-      const taskIds = new Set(tareas.filter(t => t.id_disciplina === d.id).map(t => t.id));
-      const disciplineActs = actividades.filter(a => taskIds.has(a.id_tarea));
+      // Fix: Tarea uses ID_Unico_Tarea and Actividad uses ID_Tarea
+      const taskIds = new Set(tareas.filter(t => t.id_disciplina === d.id).map(t => t.ID_Unico_Tarea));
+      const disciplineActs = actividades.filter(a => taskIds.has(a.ID_Tarea));
       
       return {
         id: d.id,
@@ -99,9 +105,11 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
     const calculatePct = (subset: Tarea[]) => {
       if (subset.length === 0) return 0;
       const inDur = subset.filter(t => {
-        if (!t.fecha_real_inicio || !t.fecha_real_fin) return false;
-        const planned = new Date(t.fecha_planeada_fin_actualizada).getTime() - new Date(t.fecha_planeada_inicio_actualizada).getTime();
-        const real = new Date(t.fecha_real_fin).getTime() - new Date(t.fecha_real_inicio).getTime();
+        // Fix: Property names changed to FRealIni and FRealFin
+        if (!t.FRealIni || !t.FRealFin) return false;
+        // Fix: Property names changed to FPlaneadaFinAct and FPlaneadaIniAct
+        const planned = new Date(t.FPlaneadaFinAct).getTime() - new Date(t.FPlaneadaIniAct).getTime();
+        const real = new Date(t.FRealFin).getTime() - new Date(t.FRealIni).getTime();
         return real <= planned;
       }).length;
       return Math.round((inDur / subset.length) * 100);
@@ -112,9 +120,10 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
       return {
         id: d.id,
         nombre: d.nombre,
-        semana: calculatePct(disciplineTasks.filter(t => new Date(t.fecha_real_fin!) >= timeRefs.oneWeekAgo)),
-        mes: calculatePct(disciplineTasks.filter(t => new Date(t.fecha_real_fin!) >= timeRefs.startOfMonth)),
-        ytd: calculatePct(disciplineTasks.filter(t => new Date(t.fecha_real_fin!) >= timeRefs.startOfYear)),
+        // Fix: Property name changed to FRealFin
+        semana: calculatePct(disciplineTasks.filter(t => new Date(t.FRealFin!) >= timeRefs.oneWeekAgo)),
+        mes: calculatePct(disciplineTasks.filter(t => new Date(t.FRealFin!) >= timeRefs.startOfMonth)),
+        ytd: calculatePct(disciplineTasks.filter(t => new Date(t.FRealFin!) >= timeRefs.startOfYear)),
         count: disciplineTasks.length
       };
     });
@@ -122,8 +131,9 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
 
   const statsByDiscipline = INITIAL_DISCIPLINAS.map(d => {
     const disciplineTasks = tareas.filter(t => t.id_disciplina === d.id);
-    const wipProjectsCount = new Set(disciplineTasks.filter(t => t.estado === 'WIP').map(t => t.id_proyecto)).size;
-    const deckProjectsCount = new Set(disciplineTasks.filter(t => t.estado === 'DECK').map(t => t.id_proyecto)).size;
+    // Fix: Tarea uses OT to link to Proyecto
+    const wipProjectsCount = new Set(disciplineTasks.filter(t => t.estado === 'WIP').map(t => t.OT)).size;
+    const deckProjectsCount = new Set(disciplineTasks.filter(t => t.estado === 'DECK').map(t => t.OT)).size;
     
     return {
       name: d.nombre,

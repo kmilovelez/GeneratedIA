@@ -1,4 +1,3 @@
-
 export type Role = 'administrador' | 'gerente_proyecto' | 'gerente_tarea' | 'lider_integracion' | 'ejecutor';
 export type ProjectStatus = 'DECK' | 'FROZEN' | 'WIP' | 'FINALIZADA';
 export type LineaNegocio = 'Aeropuertos' | 'Logística' | 'Cartón';
@@ -14,7 +13,7 @@ export interface User {
 export interface Proyecto {
   id: number;
   nombre: string;
-  ot: string;
+  OT: string;
   id_linea_negocio: number;
   id_gerente_proyecto: number;
   estado: ProjectStatus;
@@ -23,34 +22,35 @@ export interface Proyecto {
 
 export interface Tarea {
   id: number;
-  id_proyecto: number;
+  ID_Unico_Tarea: string;
+  OT: string; // Relación con Proyecto.OT
   id_disciplina: number;
   nombre: string;
   id_ejecutor: number;
   id_gerente_tarea: number;
   estado: ProjectStatus;
-  fecha_planeada_inicio_original: string;
-  fecha_planeada_fin_original: string;
-  fecha_planeada_inicio_actualizada: string;
-  fecha_planeada_fin_actualizada: string;
-  fecha_esperada_inicio?: string;
-  fecha_esperada_fin?: string;
-  fecha_real_inicio?: string;
-  fecha_real_fin?: string;
+  FPlaneadaIniOri: string;
+  FPlaneadaFinOri: string;
+  FPlaneadaIniAct: string;
+  FPlaneadaFinAct: string;
+  FEsperadaIni?: string;
+  FEsperadaFin?: string;
+  FRealIni?: string;
+  FRealFin?: string;
   razon_retraso?: string;
   fecha_creacion: string;
 }
 
 export interface Actividad {
   id: number;
-  id_tarea: number;
+  ID_Tarea: string; // Coincide con Tarea.ID_Unico_Tarea
   nombre: string;
   estado: ProjectStatus;
   isStarted: boolean;
   isCompleted: boolean;
   fecha_creacion: string;
-  fecha_inicio?: string;
-  fecha_finalizacion?: string;
+  FInicio?: string;
+  FFinalizacion?: string;
   razon_no_cumplimiento?: string;
 }
 

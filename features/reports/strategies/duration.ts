@@ -1,3 +1,4 @@
+
 import { Tarea } from '../../../types/index';
 import { getDaysDiff, checkDurationCompliance } from './kpiEngine';
 
@@ -7,11 +8,13 @@ import { getDaysDiff, checkDurationCompliance } from './kpiEngine';
  */
 export const getDurationData = (tareas: Tarea[]) => {
   return tareas
-    .filter(t => t.estado === 'FINALIZADA' && t.fecha_real_fin && t.fecha_real_inicio)
+    // Fix: Property names changed to match Tarea type (FRealFin, FRealIni)
+    .filter(t => t.estado === 'FINALIZADA' && t.FRealFin && t.FRealIni)
     .map(t => {
       // Usamos el motor para obtener los días de forma consistente
-      const pDays = getDaysDiff(t.fecha_planeada_inicio_actualizada, t.fecha_planeada_fin_actualizada);
-      const rDays = getDaysDiff(t.fecha_real_inicio, t.fecha_real_fin);
+      // Fix: Property names changed to match Tarea type (FPlaneadaIniAct, FPlaneadaFinAct, FRealIni, FRealFin)
+      const pDays = getDaysDiff(t.FPlaneadaIniAct, t.FPlaneadaFinAct);
+      const rDays = getDaysDiff(t.FRealIni, t.FRealFin);
       
       const isCompliant = checkDurationCompliance(t);
       const deviation = rDays - pDays;

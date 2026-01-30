@@ -1,3 +1,4 @@
+
 import { Proyecto, Tarea, Actividad, User } from '../../../types/index';
 import { formatDate } from '../../../lib/utils';
 
@@ -13,10 +14,12 @@ export const getDailyData = (
 ) => {
   return actividades.map(a => {
     // Lookup de Tarea
-    const tareaMadre = tareas.find(t => t.id === a.id_tarea);
+    // Fix: Actividad uses ID_Tarea to match Tarea.ID_Unico_Tarea
+    const tareaMadre = tareas.find(t => t.ID_Unico_Tarea === a.ID_Tarea);
     
     // Lookup de Proyecto (usando la tarea encontrada)
-    const proyectoVinculado = proyectos.find(p => p.id === tareaMadre?.id_proyecto);
+    // Fix: Tarea links to Proyecto via OT string
+    const proyectoVinculado = proyectos.find(p => p.OT === tareaMadre?.OT);
     
     // Lookup de Responsable (ejecutor de la tarea)
     const responsable = users.find(u => u.id === tareaMadre?.id_ejecutor);
@@ -26,7 +29,8 @@ export const getDailyData = (
 
     // El orden de las llaves define el orden de las columnas en la UI
     return {
-      'OT': proyectoVinculado?.ot || 'N/A',
+      // Fix: Property name changed to OT
+      'OT': proyectoVinculado?.OT || 'N/A',
       'Proyecto': proyectoVinculado?.nombre || 'N/A',
       'Actividad': a.nombre,
       'Responsable': responsable?.nombre || 'Sin Asignar',

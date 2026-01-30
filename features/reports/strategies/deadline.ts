@@ -1,3 +1,4 @@
+
 import { Proyecto, Tarea, User } from '../../../types/index';
 import { formatDate } from '../../../lib/utils';
 import { checkDateCompliance } from './kpiEngine';
@@ -8,10 +9,12 @@ import { checkDateCompliance } from './kpiEngine';
  */
 export const getDeadlineData = (proyectos: Proyecto[], tareas: Tarea[], users: User[]) => {
   return tareas
-    .filter(t => t.estado === 'FINALIZADA' && t.fecha_real_fin)
+    // Fix: Property name changed to FRealFin
+    .filter(t => t.estado === 'FINALIZADA' && t.FRealFin)
     .map(t => {
-      const planeada = new Date(t.fecha_planeada_fin_actualizada || t.fecha_planeada_fin_original).getTime();
-      const real = new Date(t.fecha_real_fin!).getTime();
+      // Fix: Property names changed to match Tarea type (FPlaneadaFinAct, FPlaneadaFinOri, FRealFin)
+      const planeada = new Date(t.FPlaneadaFinAct || t.FPlaneadaFinOri).getTime();
+      const real = new Date(t.FRealFin!).getTime();
       
       // Cálculo de desviación para visualización informativa en el reporte
       const diff = Math.ceil((real - planeada) / (1000 * 60 * 60 * 24));
@@ -23,10 +26,12 @@ export const getDeadlineData = (proyectos: Proyecto[], tareas: Tarea[], users: U
 
       return {
         'Tarea': t.nombre,
-        'Proyecto': proyectos.find(p => p.id === t.id_proyecto)?.nombre || 'N/A',
+        // Fix: Tarea links to Proyecto via OT string
+        'Proyecto': proyectos.find(p => p.OT === t.OT)?.nombre || 'N/A',
         'Responsable': responsable,
-        'Fecha Planeada': formatDate(t.fecha_planeada_fin_actualizada || t.fecha_planeada_fin_original),
-        'Fecha Real': formatDate(t.fecha_real_fin),
+        // Fix: Property names changed to match Tarea type
+        'Fecha Planeada': formatDate(t.FPlaneadaFinAct || t.FPlaneadaFinOri),
+        'Fecha Real': formatDate(t.FRealFin),
         'Desviación (Días)': diff > 0 ? `+${diff}` : `${diff}`,
         'Estado': isCompliant ? 'A TIEMPO' : 'RETRASO'
       };

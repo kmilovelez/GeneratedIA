@@ -37,8 +37,8 @@ const getStartDateByPeriod = (periodo: 'WEEK' | 'MONTH' | 'YTD'): Date => {
 const getFinishedTasksByPeriod = (tareas: Tarea[], periodo: 'WEEK' | 'MONTH' | 'YTD'): Tarea[] => {
   const startDate = getStartDateByPeriod(periodo);
   return tareas.filter(t => {
-    if (t.estado !== 'FINALIZADA' || !t.fecha_real_fin) return false;
-    const finishDate = new Date(t.fecha_real_fin);
+    if (t.estado !== 'FINALIZADA' || !t.FRealFin) return false;
+    const finishDate = new Date(t.FRealFin);
     return finishDate >= startDate;
   });
 };
@@ -49,8 +49,8 @@ const getFinishedTasksByPeriod = (tareas: Tarea[], periodo: 'WEEK' | 'MONTH' | '
 const getCompletedActivitiesByPeriod = (actividades: Actividad[], periodo: 'WEEK' | 'MONTH' | 'YTD'): Actividad[] => {
   const startDate = getStartDateByPeriod(periodo);
   return actividades.filter(a => {
-    if (!a.isCompleted || !a.fecha_finalizacion) return false;
-    const finishDate = new Date(a.fecha_finalizacion);
+    if (!a.isCompleted || !a.FFinalizacion) return false;
+    const finishDate = new Date(a.FFinalizacion);
     return finishDate >= startDate;
   });
 };
@@ -61,10 +61,10 @@ const getCompletedActivitiesByPeriod = (actividades: Actividad[], periodo: 'WEEK
  */
 export const checkDurationCompliance = (tarea: Tarea): boolean => {
   const { 
-    fecha_planeada_inicio_actualizada: pStart, 
-    fecha_planeada_fin_actualizada: pEnd,
-    fecha_real_inicio: rStart,
-    fecha_real_fin: rEnd 
+    FPlaneadaIniAct: pStart, 
+    FPlaneadaFinAct: pEnd,
+    FRealIni: rStart,
+    FRealFin: rEnd 
   } = tarea;
 
   if (!pStart || !pEnd || !rStart || !rEnd) return false;
@@ -79,7 +79,7 @@ export const checkDurationCompliance = (tarea: Tarea): boolean => {
  * Verifica si una tarea se entregó en la fecha planeada o antes.
  */
 export const checkDateCompliance = (tarea: Tarea): boolean => {
-  const { fecha_planeada_fin_actualizada: pEnd, fecha_real_fin: rEnd } = tarea;
+  const { FPlaneadaFinAct: pEnd, FRealFin: rEnd } = tarea;
   if (!pEnd || !rEnd) return false;
   
   return new Date(rEnd).getTime() <= new Date(pEnd).getTime();
@@ -90,8 +90,8 @@ export const checkDateCompliance = (tarea: Tarea): boolean => {
  * Retorna true si la duración real es exactamente de 1 día.
  */
 export const checkDailyCompliance = (actividad: Actividad): boolean => {
-  if (!actividad.fecha_inicio || !actividad.fecha_finalizacion) return false;
-  return getDaysDiff(actividad.fecha_inicio, actividad.fecha_finalizacion) === 1;
+  if (!actividad.FInicio || !actividad.FFinalizacion) return false;
+  return getDaysDiff(actividad.FInicio, actividad.FFinalizacion) === 1;
 };
 
 /**

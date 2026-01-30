@@ -38,7 +38,8 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
   const handleOpenEdit = (project: Proyecto) => {
     setProjectForm({
       nombre: project.nombre,
-      ot: project.ot,
+      // Fix: Use project.OT to match the Proyecto type
+      ot: project.OT,
       id_linea_negocio: project.id_linea_negocio,
       id_gerente_proyecto: project.id_gerente_proyecto
     });
@@ -50,12 +51,18 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
     e.preventDefault();
     if (!projectForm.nombre || !projectForm.ot) return;
 
+    // Fix: Create payload to correctly map to Proyecto property names (OT)
+    const payload = {
+      nombre: projectForm.nombre,
+      OT: projectForm.ot,
+      id_linea_negocio: projectForm.id_linea_negocio,
+      id_gerente_proyecto: projectForm.id_gerente_proyecto
+    };
+
     if (editingProjectId) {
-      onUpdateProject(editingProjectId, projectForm);
+      onUpdateProject(editingProjectId, payload);
     } else {
-      // Fix: Removed 'estado' from onAddProject call as it is handled by the parent component (App.tsx)
-      // and is not part of the Omit<Proyecto, 'id' | 'estado' | 'fecha_creacion'> type.
-      onAddProject(projectForm);
+      onAddProject(payload);
     }
     
     setIsProjectModalOpen(false);
@@ -187,7 +194,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
                     </div>
                   </td>
                   <td className="px-8 py-6">
-                    <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">{p.ot}</span>
+                    <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">{p.OT}</span>
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-2">
