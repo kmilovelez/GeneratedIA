@@ -6,10 +6,7 @@ export const getScopeCreepData = (proyectos: Proyecto[], tareas: Tarea[], activi
   const growth: any[] = [];
   
   tareas.forEach(t => {
-    // Fix: Actividad property name is ID_Tarea and Tarea uses ID_Unico_Tarea
-    const taskActs = actividades.filter(a => a.ID_Tarea === t.ID_Unico_Tarea);
-    
-    // Lógica de negocio: Actividades creadas más de 1 minuto después de la tarea
+    const taskActs = actividades.filter(a => a.ID_Unico_Tarea === t.ID_Unico_Tarea);
     const extraActs = taskActs.filter(a => {
       const taskCreationTime = new Date(t.fecha_creacion).getTime();
       const activityCreationTime = new Date(a.fecha_creacion).getTime();
@@ -18,10 +15,9 @@ export const getScopeCreepData = (proyectos: Proyecto[], tareas: Tarea[], activi
 
     extraActs.forEach(a => {
       growth.push({
-        // Fix: Tarea links to Proyecto via OT string
-        'Proyecto': proyectos.find(p => p.OT === t.OT)?.nombre || 'N/A',
-        'Tarea': t.nombre,
-        'Actividad Agregada': a.nombre,
+        'Proyecto': proyectos.find(p => p.OT === t.OT)?.Title || 'N/A',
+        'Tarea': t.Title,
+        'Actividad Agregada': a.Title,
         'Fecha Tarea': formatDate(t.fecha_creacion),
         'Fecha Adición': formatDate(a.fecha_creacion)
       });

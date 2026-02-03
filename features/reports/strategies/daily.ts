@@ -13,34 +13,29 @@ export const getDailyData = (
   users: User[]
 ) => {
   return actividades.map(a => {
-    // Lookup de Tarea
-    // Fix: Actividad uses ID_Tarea to match Tarea.ID_Unico_Tarea
-    const tareaMadre = tareas.find(t => t.ID_Unico_Tarea === a.ID_Tarea);
+    // Lookup de Tarea por ID_Unico_Tarea
+    const tareaMadre = tareas.find(t => t.ID_Unico_Tarea === a.ID_Unico_Tarea);
     
-    // Lookup de Proyecto (usando la tarea encontrada)
-    // Fix: Tarea links to Proyecto via OT string
+    // Lookup de Proyecto (usando la tarea encontrada por OT)
     const proyectoVinculado = proyectos.find(p => p.OT === tareaMadre?.OT);
     
     // Lookup de Responsable (ejecutor de la tarea)
-    const responsable = users.find(u => u.id === tareaMadre?.id_ejecutor);
+    const responsable = users.find(u => u.id === tareaMadre?.ID_Ejecutor);
     
     // Determinación de estado textual de la actividad
-    const estadoActividad = a.isCompleted ? 'FINALIZADA' : (a.isStarted ? 'WIP' : 'DECK');
+    const estadoActividad = a.IsCompleted ? 'FINALIZADA' : (a.IsStarted ? 'WIP' : 'DECK');
 
-    // El orden de las llaves define el orden de las columnas en la UI
     return {
-      // Fix: Property name changed to OT
       'OT': proyectoVinculado?.OT || 'N/A',
-      'Proyecto': proyectoVinculado?.nombre || 'N/A',
-      'Actividad': a.nombre,
+      'Proyecto': proyectoVinculado?.Title || 'N/A',
+      'Actividad': a.Title,
       'Responsable': responsable?.nombre || 'Sin Asignar',
       'Estado': estadoActividad,
       'Fecha Registro': formatDate(a.fecha_creacion),
-      'Tarea Madre': tareaMadre?.nombre || 'N/A',
-      'Cumplida': a.isCompleted ? 'SÍ' : 'NO'
+      'Tarea Madre': tareaMadre?.Title || 'N/A',
+      'Cumplida': a.IsCompleted ? 'SÍ' : 'NO'
     };
   }).sort((a, b) => {
-    // Ordenar por fecha de registro descendente
     const dateA = new Date(a['Fecha Registro']).getTime();
     const dateB = new Date(b['Fecha Registro']).getTime();
     return dateB - dateA;

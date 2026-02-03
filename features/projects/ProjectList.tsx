@@ -6,7 +6,7 @@ import { Proyecto, User, ProjectStatus } from '../../types/index';
 interface ProjectListProps {
   proyectos: Proyecto[];
   users: User[];
-  onAddProject: (project: Omit<Proyecto, 'id' | 'estado' | 'fecha_creacion'>) => void;
+  onAddProject: (project: Omit<Proyecto, 'id' | 'Estado' | 'fecha_creacion'>) => void;
   onUpdateProject: (id: number, updates: Partial<Proyecto>) => void;
   onDeleteProject: (id: number) => void;
 }
@@ -16,10 +16,10 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
   
   const initialFormState = {
-    nombre: '',
-    ot: '',
-    id_linea_negocio: 1,
-    id_gerente_proyecto: users.find(u => u.rol === 'gerente_proyecto')?.id || users[0]?.id || 1,
+    Title: '',
+    OT: '',
+    ID_LineaNegocio: 1,
+    ID_GerenteProyecto: users.find(u => u.rol === 'gerente_proyecto')?.id || users[0]?.id || 1,
   };
 
   const [projectForm, setProjectForm] = useState(initialFormState);
@@ -37,11 +37,10 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
 
   const handleOpenEdit = (project: Proyecto) => {
     setProjectForm({
-      nombre: project.nombre,
-      // Fix: Use project.OT to match the Proyecto type
-      ot: project.OT,
-      id_linea_negocio: project.id_linea_negocio,
-      id_gerente_proyecto: project.id_gerente_proyecto
+      Title: project.Title,
+      OT: project.OT,
+      ID_LineaNegocio: project.ID_LineaNegocio,
+      ID_GerenteProyecto: project.ID_GerenteProyecto
     });
     setEditingProjectId(project.id);
     setIsProjectModalOpen(true);
@@ -49,14 +48,13 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
 
   const handleSaveProject = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!projectForm.nombre || !projectForm.ot) return;
+    if (!projectForm.Title || !projectForm.OT) return;
 
-    // Fix: Create payload to correctly map to Proyecto property names (OT)
     const payload = {
-      nombre: projectForm.nombre,
-      OT: projectForm.ot,
-      id_linea_negocio: projectForm.id_linea_negocio,
-      id_gerente_proyecto: projectForm.id_gerente_proyecto
+      Title: projectForm.Title,
+      OT: projectForm.OT,
+      ID_LineaNegocio: projectForm.ID_LineaNegocio,
+      ID_GerenteProyecto: projectForm.ID_GerenteProyecto
     };
 
     if (editingProjectId) {
@@ -116,8 +114,8 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
                   className="w-full p-4 bg-white text-slate-900 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-50 transition-all text-sm font-semibold placeholder:text-slate-300 shadow-sm" 
                   placeholder="Ej: Modernización Planta Norte" 
                   required 
-                  value={projectForm.nombre} 
-                  onChange={e => setProjectForm({...projectForm, nombre: e.target.value})} 
+                  value={projectForm.Title} 
+                  onChange={e => setProjectForm({...projectForm, Title: e.target.value})} 
                 />
               </div>
 
@@ -130,8 +128,8 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
                   className="w-full p-4 bg-white text-slate-900 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-50 transition-all text-sm font-semibold placeholder:text-slate-300 shadow-sm" 
                   placeholder="Ej: OT-2024-001" 
                   required 
-                  value={projectForm.ot} 
-                  onChange={e => setProjectForm({...projectForm, ot: e.target.value})} 
+                  value={projectForm.OT} 
+                  onChange={e => setProjectForm({...projectForm, OT: e.target.value})} 
                 />
               </div>
 
@@ -141,8 +139,8 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
                 </label>
                 <select 
                   className="w-full p-4 bg-white text-slate-900 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-50 transition-all text-sm font-semibold appearance-none shadow-sm cursor-pointer" 
-                  value={projectForm.id_gerente_proyecto} 
-                  onChange={e => setProjectForm({...projectForm, id_gerente_proyecto: Number(e.target.value)})}
+                  value={projectForm.ID_GerenteProyecto} 
+                  onChange={e => setProjectForm({...projectForm, ID_GerenteProyecto: Number(e.target.value)})}
                 >
                   {managers.map(m => (
                     <option key={m.id} value={m.id}>{m.nombre}</option>
@@ -182,15 +180,15 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
           </thead>
           <tbody className="divide-y divide-slate-100">
             {proyectos.map(p => {
-              const manager = users.find(u => u.id === p.id_gerente_proyecto);
+              const manager = users.find(u => u.id === p.ID_GerenteProyecto);
               return (
                 <tr key={p.id} className="group hover:bg-slate-50/30 transition-colors">
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-black text-xs shadow-sm">
-                        {p.nombre.substring(0, 1)}
+                        {p.Title.substring(0, 1)}
                       </div>
-                      <span className="text-sm font-black text-slate-800 tracking-tight group-hover:text-blue-600 transition-colors">{p.nombre}</span>
+                      <span className="text-sm font-black text-slate-800 tracking-tight group-hover:text-blue-600 transition-colors">{p.Title}</span>
                     </div>
                   </td>
                   <td className="px-8 py-6">

@@ -15,34 +15,27 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [isDurationModalOpen, setIsDurationModalOpen] = useState(false);
   
-  // Fix: Property name changed to FRealFin
-  const finishedTasks = tareas.filter(t => t.estado === 'FINALIZADA' && t.FRealFin);
+  const finishedTasks = tareas.filter(t => t.Estado === 'FINALIZADA' && t.FRealFin);
   
-  // KPI 1: Cumplimiento en Fecha
   const tasksOnTime = finishedTasks.filter(t => {
-    // Fix: Property names changed to FRealFin and FPlaneadaFinAct
     if (!t.FRealFin || !t.FPlaneadaFinAct) return false;
     return new Date(t.FRealFin) <= new Date(t.FPlaneadaFinAct);
   }).length;
   const totalCumplimientoFecha = finishedTasks.length > 0 ? Math.round((tasksOnTime / finishedTasks.length) * 100) : 0;
 
-  // KPI 2: Cumplimiento Diario (Basado en Actividades de Hoy)
   const todayStr = new Date().toISOString().split('T')[0];
   const dailyActivities = actividades.filter(a => a.fecha_creacion.startsWith(todayStr));
-  const finishedDaily = dailyActivities.filter(a => a.isCompleted).length;
+  const finishedDaily = dailyActivities.filter(a => a.IsCompleted).length;
   const totalCumplimientoDiario = dailyActivities.length > 0 ? Math.round((finishedDaily / dailyActivities.length) * 100) : 0;
 
-  // KPI 3: Cumplimiento Duración
   const tasksInDuration = finishedTasks.filter(t => {
-    // Fix: Property names changed to match Tarea type
-    if (!t.FRealIni || !t.FRealFin || !t.FPlaneadaIniAct || !t.FPlaneadaFinAct) return false;
-    const plannedDays = (new Date(t.FPlaneadaFinAct).getTime() - new Date(t.FPlaneadaIniAct).getTime());
-    const realDays = (new Date(t.FRealFin).getTime() - new Date(t.FRealIni).getTime());
+    if (!t.FRealInicio || !t.FRealFin || !t.FPlaneadaInicioAct || !t.FPlaneadaFinAct) return false;
+    const plannedDays = (new Date(t.FPlaneadaFinAct).getTime() - new Date(t.FPlaneadaInicioAct).getTime());
+    const realDays = (new Date(t.FRealFin).getTime() - new Date(t.FRealInicio).getTime());
     return realDays <= plannedDays;
   }).length;
   const totalCumplimientoDuracion = finishedTasks.length > 0 ? Math.round((tasksInDuration / finishedTasks.length) * 100) : 0;
 
-  // Lógica de fechas comunes para desgloses
   const timeRefs = useMemo(() => {
     const now = new Date();
     const oneWeekAgo = new Date();
@@ -52,21 +45,18 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
     return { oneWeekAgo, startOfMonth, startOfYear };
   }, []);
 
-  // 1. Desglose Cumplimiento en Fecha
   const complianceBreakdown = useMemo(() => {
     const calculatePct = (subset: Tarea[]) => {
       if (subset.length === 0) return 0;
-      // Fix: Property names changed to FRealFin and FPlaneadaFinAct
       const onTime = subset.filter(t => new Date(t.FRealFin!) <= new Date(t.FPlaneadaFinAct)).length;
       return Math.round((onTime / subset.length) * 100);
     };
 
     return INITIAL_DISCIPLINAS.map(d => {
-      const disciplineTasks = finishedTasks.filter(t => t.id_disciplina === d.id);
+      const disciplineTasks = finishedTasks.filter(t => t.ID_Disciplina === d.id);
       return {
         id: d.id,
         nombre: d.nombre,
-        // Fix: Property name changed to FRealFin
         semana: calculatePct(disciplineTasks.filter(t => new Date(t.FRealFin!) >= timeRefs.oneWeekAgo)),
         mes: calculatePct(disciplineTasks.filter(t => new Date(t.FRealFin!) >= timeRefs.startOfMonth)),
         ytd: calculatePct(disciplineTasks.filter(t => new Date(t.FRealFin!) >= timeRefs.startOfYear)),
@@ -75,19 +65,16 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
     });
   }, [finishedTasks, timeRefs]);
 
-  // 2. Desglose Cumplimiento Diario (Actividades)
   const dailyBreakdown = useMemo(() => {
     const calculatePct = (subset: Actividad[]) => {
       if (subset.length === 0) return 0;
-      const done = subset.filter(a => a.isCompleted).length;
+      const done = subset.filter(a => a.IsCompleted).length;
       return Math.round((done / subset.length) * 100);
     };
 
     return INITIAL_DISCIPLINAS.map(d => {
-      // Filtrar actividades cuyas tareas pertenezcan a esta disciplina
-      // Fix: Tarea uses ID_Unico_Tarea and Actividad uses ID_Tarea
-      const taskIds = new Set(tareas.filter(t => t.id_disciplina === d.id).map(t => t.ID_Unico_Tarea));
-      const disciplineActs = actividades.filter(a => taskIds.has(a.ID_Tarea));
+      const taskIds = new Set(tareas.filter(t => t.ID_Disciplina === d.id).map(t => t.ID_Unico_Tarea));
+      const disciplineActs = actividades.filter(a => taskIds.has(a.ID_Unico_Tarea));
       
       return {
         id: d.id,
@@ -100,27 +87,23 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
     });
   }, [actividades, tareas, timeRefs]);
 
-  // 3. Desglose Cumplimiento Duración
   const durationBreakdown = useMemo(() => {
     const calculatePct = (subset: Tarea[]) => {
       if (subset.length === 0) return 0;
       const inDur = subset.filter(t => {
-        // Fix: Property names changed to FRealIni and FRealFin
-        if (!t.FRealIni || !t.FRealFin) return false;
-        // Fix: Property names changed to FPlaneadaFinAct and FPlaneadaIniAct
-        const planned = new Date(t.FPlaneadaFinAct).getTime() - new Date(t.FPlaneadaIniAct).getTime();
-        const real = new Date(t.FRealFin).getTime() - new Date(t.FRealIni).getTime();
+        if (!t.FRealInicio || !t.FRealFin) return false;
+        const planned = new Date(t.FPlaneadaFinAct).getTime() - new Date(t.FPlaneadaInicioAct).getTime();
+        const real = new Date(t.FRealFin).getTime() - new Date(t.FRealInicio).getTime();
         return real <= planned;
       }).length;
       return Math.round((inDur / subset.length) * 100);
     };
 
     return INITIAL_DISCIPLINAS.map(d => {
-      const disciplineTasks = finishedTasks.filter(t => t.id_disciplina === d.id);
+      const disciplineTasks = finishedTasks.filter(t => t.ID_Disciplina === d.id);
       return {
         id: d.id,
         nombre: d.nombre,
-        // Fix: Property name changed to FRealFin
         semana: calculatePct(disciplineTasks.filter(t => new Date(t.FRealFin!) >= timeRefs.oneWeekAgo)),
         mes: calculatePct(disciplineTasks.filter(t => new Date(t.FRealFin!) >= timeRefs.startOfMonth)),
         ytd: calculatePct(disciplineTasks.filter(t => new Date(t.FRealFin!) >= timeRefs.startOfYear)),
@@ -130,10 +113,9 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
   }, [finishedTasks, timeRefs]);
 
   const statsByDiscipline = INITIAL_DISCIPLINAS.map(d => {
-    const disciplineTasks = tareas.filter(t => t.id_disciplina === d.id);
-    // Fix: Tarea uses OT to link to Proyecto
-    const wipProjectsCount = new Set(disciplineTasks.filter(t => t.estado === 'WIP').map(t => t.OT)).size;
-    const deckProjectsCount = new Set(disciplineTasks.filter(t => t.estado === 'DECK').map(t => t.OT)).size;
+    const disciplineTasks = tareas.filter(t => t.ID_Disciplina === d.id);
+    const wipProjectsCount = new Set(disciplineTasks.filter(t => t.Estado === 'WIP').map(t => t.OT)).size;
+    const deckProjectsCount = new Set(disciplineTasks.filter(t => t.Estado === 'DECK').map(t => t.OT)).size;
     
     return {
       name: d.nombre,
@@ -156,7 +138,6 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
         </div>
       </header>
 
-      {/* 1. Alertas Tempranas */}
       <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm flex flex-col w-full overflow-hidden">
         <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <h4 className="font-black text-slate-800 flex items-center gap-2 text-xs uppercase tracking-[0.2em]">
@@ -188,9 +169,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
         </div>
       </div>
 
-      {/* 2. KPIs de Cumplimiento */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* KPI 1: Cumplimiento en Fecha */}
         <div 
           onClick={() => setIsComplianceModalOpen(true)}
           className="bg-white rounded-[2rem] border-2 border-transparent hover:border-indigo-200 shadow-sm overflow-hidden flex flex-col group transition-all cursor-pointer active:scale-95"
@@ -210,7 +189,6 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
           </div>
         </div>
 
-        {/* KPI 2: Cumplimiento Diario */}
         <div 
           onClick={() => setIsDailyModalOpen(true)}
           className="bg-white rounded-[2rem] border-2 border-transparent border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:border-blue-300 transition-all cursor-pointer active:scale-95"
@@ -232,7 +210,6 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
           </div>
         </div>
 
-        {/* KPI 3: Cumplimiento Duración */}
         <div 
           onClick={() => setIsDurationModalOpen(true)}
           className="bg-white rounded-[2rem] border-2 border-transparent border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:border-emerald-300 transition-all cursor-pointer active:scale-95"
@@ -255,7 +232,6 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
         </div>
       </div>
 
-      {/* 3. Conteo WIP/DECK por Disciplina */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {statsByDiscipline.map(d => (
           <div key={d.name} className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:border-blue-400/50 transition-all hover:shadow-xl hover:shadow-slate-200/50">
@@ -289,9 +265,6 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
         ))}
       </div>
 
-      {/* RENDERIZADO DE MODALES */}
-      
-      {/* 1. Modal: Desglose de Cumplimiento en Fecha */}
       <ComplianceDetailModal 
         isOpen={isComplianceModalOpen} 
         onClose={() => setIsComplianceModalOpen(false)} 
@@ -302,7 +275,6 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
         helpText="Comparativa de Fecha Real vs Fecha Planeada Actualizada para tareas FINALIZADAS."
       />
 
-      {/* 2. Modal: Desglose de Cumplimiento Diario */}
       <ComplianceDetailModal 
         isOpen={isDailyModalOpen} 
         onClose={() => setIsDailyModalOpen(false)} 
@@ -313,7 +285,6 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
         helpText="Porcentaje de actividades completadas frente al total de actividades creadas por disciplina."
       />
 
-      {/* 3. Modal: Desglose de Cumplimiento en Duración */}
       <ComplianceDetailModal 
         isOpen={isDurationModalOpen} 
         onClose={() => setIsDurationModalOpen(false)} 

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { LayoutDashboard, Briefcase, CheckSquare, BarChart3, History, Settings, Upload, LogOut, Shield } from 'lucide-react';
 import { User } from '../types/index';
@@ -50,8 +51,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, curre
             {currentUser.nombre.substring(0, 2)}
           </div>
           <div className="flex-1 overflow-hidden">
-            <p className="text-xs font-semibold truncate text-slate-900">{currentUser.nombre}</p>
-            <p className="text-[10px] text-slate-400 capitalize">{currentUser.rol.replace('_', ' ')}</p>
+            <p className="text-xs font-semibold truncate">{currentUser.nombre}</p>
+            <p className="text-[10px] text-slate-500 capitalize">{currentUser.rol.replace('_', ' ')}</p>
           </div>
           <button onClick={onLogout} className="text-slate-500 hover:text-red-400 transition" title="Cerrar Sesión"><LogOut size={16} /></button>
         </div>

@@ -15,10 +15,10 @@ export const getDaysDiff = (start: string | undefined, end: string | undefined):
 };
 
 export const checkDurationCompliance = (tarea: Tarea): boolean => {
-  const { FPlaneadaIniAct, FPlaneadaFinAct, FRealIni, FRealFin } = tarea;
-  if (!FPlaneadaIniAct || !FPlaneadaFinAct || !FRealIni || !FRealFin) return false;
-  const pDur = getDaysDiff(FPlaneadaIniAct, FPlaneadaFinAct);
-  const rDur = getDaysDiff(FRealIni, FRealFin);
+  const { FPlaneadaInicioAct, FPlaneadaFinAct, FRealInicio, FRealFin } = tarea;
+  if (!FPlaneadaInicioAct || !FPlaneadaFinAct || !FRealInicio || !FRealFin) return false;
+  const pDur = getDaysDiff(FPlaneadaInicioAct, FPlaneadaFinAct);
+  const rDur = getDaysDiff(FRealInicio, FRealFin);
   return (pDur - rDur) >= 0;
 };
 
@@ -28,8 +28,8 @@ export const checkDateCompliance = (tarea: Tarea): boolean => {
 };
 
 export const checkDailyCompliance = (actividad: Actividad): boolean => {
-  if (!actividad.FInicio || !actividad.FFinalizacion) return false;
-  return getDaysDiff(actividad.FInicio, actividad.FFinalizacion) === 1;
+  if (!actividad.FechaInicio || !actividad.FechaFinalizacion) return false;
+  return getDaysDiff(actividad.FechaInicio, actividad.FechaFinalizacion) === 1;
 };
 
 /**
@@ -63,15 +63,15 @@ export const getHistoricalDataByDiscipline = (tareas: Tarea[], actividades: Acti
     disciplines.forEach(d => {
       if (kpiType === 'daily') {
         const filteredActs = actividades.filter(a => {
-          if (!a.isCompleted || !a.FFinalizacion) return false;
-          const date = new Date(a.FFinalizacion);
-          const taskOfDiscipline = tareas.some(t => t.ID_Unico_Tarea === a.ID_Tarea && t.id_disciplina === d.id);
+          if (!a.IsCompleted || !a.FechaFinalizacion) return false;
+          const date = new Date(a.FechaFinalizacion);
+          const taskOfDiscipline = tareas.some(t => t.ID_Unico_Tarea === a.ID_Unico_Tarea && t.ID_Disciplina === d.id);
           return date.getMonth() === m && date.getFullYear() === currentYear && taskOfDiscipline;
         });
         monthData[d.name] = calculatePct(filteredActs, checkDailyCompliance);
       } else {
         const filteredTasks = tareas.filter(t => {
-          if (t.estado !== 'FINALIZADA' || !t.FRealFin || t.id_disciplina !== d.id) return false;
+          if (t.Estado !== 'FINALIZADA' || !t.FRealFin || t.ID_Disciplina !== d.id) return false;
           const date = new Date(t.FRealFin);
           return date.getMonth() === m && date.getFullYear() === currentYear;
         });
@@ -86,14 +86,14 @@ export const getHistoricalDataByDiscipline = (tareas: Tarea[], actividades: Acti
   disciplines.forEach(d => {
     if (kpiType === 'daily') {
       const ytdActs = actividades.filter(a => {
-        if (!a.isCompleted || !a.FFinalizacion) return false;
-        const taskOfDiscipline = tareas.some(t => t.ID_Unico_Tarea === a.ID_Tarea && t.id_disciplina === d.id);
-        return new Date(a.FFinalizacion).getFullYear() === currentYear && taskOfDiscipline;
+        if (!a.IsCompleted || !a.FechaFinalizacion) return false;
+        const taskOfDiscipline = tareas.some(t => t.ID_Unico_Tarea === a.ID_Unico_Tarea && t.ID_Disciplina === d.id);
+        return new Date(a.FechaFinalizacion).getFullYear() === currentYear && taskOfDiscipline;
       });
       ytdData[d.name] = calculatePct(ytdActs, checkDailyCompliance);
     } else {
       const ytdTasks = tareas.filter(t => {
-        return t.estado === 'FINALIZADA' && t.FRealFin && t.id_disciplina === d.id && new Date(t.FRealFin).getFullYear() === currentYear;
+        return t.Estado === 'FINALIZADA' && t.FRealFin && t.ID_Disciplina === d.id && new Date(t.FRealFin).getFullYear() === currentYear;
       });
       ytdData[d.name] = calculatePct(ytdTasks, kpiType === 'duration' ? checkDurationCompliance : checkDateCompliance);
     }
@@ -105,14 +105,14 @@ export const getHistoricalDataByDiscipline = (tareas: Tarea[], actividades: Acti
 
 export const calculateProjectProgress = (tareas: Tarea[]): number => {
   if (!tareas || tareas.length === 0) return 0;
-  const completedCount = tareas.filter(t => t.estado === 'FINALIZADA').length;
+  const completedCount = tareas.filter(t => t.Estado === 'FINALIZADA').length;
   return Math.round((completedCount / tareas.length) * 100);
 };
 
 export const calculateResourceEfficiency = (actividades: Actividad[]): number => {
   if (!actividades || actividades.length === 0) return 0;
-  const startedCount = actividades.filter(a => a.isStarted).length;
+  const startedCount = actividades.filter(a => a.IsStarted).length;
   if (startedCount === 0) return 0;
-  const completedCount = actividades.filter(a => a.isCompleted).length;
+  const completedCount = actividades.filter(a => a.IsCompleted).length;
   return Math.round((completedCount / startedCount) * 100);
 }

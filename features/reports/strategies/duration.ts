@@ -2,25 +2,18 @@
 import { Tarea } from '../../../types/index';
 import { getDaysDiff, checkDurationCompliance } from './kpiEngine';
 
-/**
- * Genera los datos para el reporte de Cumplimiento de Duración.
- * Delegando la lógica de cálculo al motor de KPIs centralizado (kpiEngine).
- */
 export const getDurationData = (tareas: Tarea[]) => {
   return tareas
-    // Fix: Property names changed to match Tarea type (FRealFin, FRealIni)
-    .filter(t => t.estado === 'FINALIZADA' && t.FRealFin && t.FRealIni)
+    .filter(t => t.Estado === 'FINALIZADA' && t.FRealFin && t.FRealInicio)
     .map(t => {
-      // Usamos el motor para obtener los días de forma consistente
-      // Fix: Property names changed to match Tarea type (FPlaneadaIniAct, FPlaneadaFinAct, FRealIni, FRealFin)
-      const pDays = getDaysDiff(t.FPlaneadaIniAct, t.FPlaneadaFinAct);
-      const rDays = getDaysDiff(t.FRealIni, t.FRealFin);
+      const pDays = getDaysDiff(t.FPlaneadaInicioAct, t.FPlaneadaFinAct);
+      const rDays = getDaysDiff(t.FRealInicio, t.FRealFin);
       
       const isCompliant = checkDurationCompliance(t);
       const deviation = rDays - pDays;
       
       return {
-        'Tarea': t.nombre, 
+        'Tarea': t.Title, 
         'Días Planeados': pDays, 
         'Días Reales': rDays, 
         'Desviación': deviation > 0 ? `+${deviation}` : `${deviation}`, 
