@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { AccountInfo } from '@azure/msal-browser';
 
 import { Sidebar } from './layout/Sidebar';
 import { LoginScreen } from './features/auth/LoginScreen';
@@ -13,16 +14,42 @@ import { ImportView } from './features/admin/ImportView';
 
 import { User, Proyecto, Tarea, Actividad, Alerta, ProjectStatus } from './types/index';
 import { DEFAULT_USERS } from './lib/utils';
+import {
+  isMicrosoftConfigured,
+  microsoftLoginRequest,
+  msalInstance,
+} from './lib/auth/microsoftAuth';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'proyectos' | 'tareas' | 'reportes' | 'historicos' | 'admin' | 'import'>('dashboard');
+  const [authError, setAuthError] = useState<string | null>(null);
   
   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
+
+  const buildUserFromAccount = (account: AccountInfo): User => ({
+    id: Date.now(),
+    nombre: account.name ?? account.username,
+    email: account.username,
+    rol: 'ejecutor',
+  });
+
+  const resolveUserFromAccount = (account: AccountInfo) => {
+    setUsers(prev => {
+      const existing = prev.find(user => user.email === account.username);
+      if (existing) {
+        setCurrentUser(existing);
+        return prev;
+      }
+      const newUser = buildUserFromAccount(account);
+      setCurrentUser(newUser);
+      return [...prev, newUser];
+    });
+  };
 
   // Load Data
   useEffect(() => {
@@ -67,18 +94,52 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+    msalInstance.initialize().then(() => {
+      if (!isMounted) return;
+      const [account] = msalInstance.getAllAccounts();
+      if (account) {
+        resolveUserFromAccount(account);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (proyectos.length > 0 || users.length > DEFAULT_USERS.length) {
       localStorage.setItem('gestor_recursos_data', JSON.stringify({ users, proyectos, tareas, actividades, alertas }));
     }
   }, [users, proyectos, tareas, actividades, alertas]);
 
   const handleLogout = () => {
+    const [account] = msalInstance.getAllAccounts();
+    if (account) {
+      msalInstance.logoutPopup({ account });
+    }
     setCurrentUser(null);
     setActiveTab('dashboard');
   };
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
+  };
+
+  const handleMicrosoftLogin = async () => {
+    setAuthError(null);
+    if (!isMicrosoftConfigured) {
+      setAuthError('Falta configurar el acceso Microsoft en el entorno.');
+      return;
+    }
+    try {
+      const response = await msalInstance.loginPopup(microsoftLoginRequest);
+      if (response.account) {
+        resolveUserFromAccount(response.account);
+      }
+    } catch (error) {
+      setAuthError('No se pudo iniciar sesión con Microsoft. Intenta nuevamente.');
+    }
   };
 
   const addTask = (taskData: Omit<Tarea, 'id' | 'Estado' | 'fecha_creacion'>) => {
@@ -144,7 +205,14 @@ export default function App() {
   };
 
   if (!currentUser) {
-    return <LoginScreen onLogin={handleLogin} />;
+    return (
+      <LoginScreen
+        onLogin={handleLogin}
+        onMicrosoftLogin={handleMicrosoftLogin}
+        isMicrosoftConfigured={isMicrosoftConfigured}
+        authError={authError}
+      />
+    );
   }
 
   return (

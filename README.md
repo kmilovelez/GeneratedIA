@@ -16,5 +16,6 @@ View your app in AI Studio: https://ai.studio/apps/drive/1teVT_ZFK1C8wxuN6s31Rvo
 1. Install dependencies:
    `npm install`
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+3. (Opcional) Configura `VITE_AZURE_AD_CLIENT_ID` y `VITE_AZURE_AD_TENANT_ID` para habilitar el inicio de sesión con Microsoft.
+4. Run the app:
    `npm run dev`
