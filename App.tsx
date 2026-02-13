@@ -13,64 +13,53 @@ import { ImportView } from './features/admin/ImportView';
 
 import { User, Proyecto, Tarea, Actividad, Alerta, ProjectStatus } from './types/index';
 import { DEFAULT_USERS } from './lib/utils';
+import { dataRepository } from './lib/dataRepository';
+import { isSupabaseConfigured } from './lib/supabaseClient';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'proyectos' | 'tareas' | 'reportes' | 'historicos' | 'admin' | 'import'>('dashboard');
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
   
   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
 
-  // Load Data
   useEffect(() => {
-    const saved = localStorage.getItem('gestor_recursos_data');
-    if (saved) {
-      const data = JSON.parse(saved);
-      if (data.users) setUsers(data.users);
-      setProyectos(data.proyectos || []);
-      setTareas(data.tareas || []);
-      setActividades(data.actividades || []);
-      setAlertas(data.alertas || []);
-    } else {
-      const yesterday = new Date(Date.now() - 86400000);
+    let active = true;
+    const loadData = async () => {
+      setIsLoadingData(true);
+      setDataError(null);
+      try {
+        const data = await dataRepository.getAllData();
+        if (!active) return;
 
-      const mockProjects: Proyecto[] = [
-        { id: 1, Title: 'Modernización Terminal A', OT: 'OT-1001', ID_LineaNegocio: 1, ID_GerenteProyecto: 2, Estado: 'WIP', fecha_creacion: yesterday.toISOString() },
-        { id: 2, Title: 'Sistema Clasificación Logística', OT: 'OT-2005', ID_LineaNegocio: 2, ID_GerenteProyecto: 2, Estado: 'DECK', fecha_creacion: yesterday.toISOString() },
-      ];
-      const mockTasks: Tarea[] = [
-        { 
-          id: 1, ID_Unico_Tarea: 'OT-1001-DesAPI', OT: 'OT-1001', ID_Disciplina: 1, Title: 'Desarrollo API Central', 
-          ID_Ejecutor: 4, GerenteTarea: 3, Estado: 'WIP',
-          FPlaneadaInicioOrig: '2024-03-01', FPlaneadaFinOrig: '2024-03-30',
-          FPlaneadaInicioAct: '2024-03-01', FPlaneadaFinAct: '2024-03-30',
-          FEsperadaIni: '2024-03-05', FEsperadaFin: '2024-04-05',
-          FRealInicio: yesterday.toISOString(),
-          fecha_creacion: yesterday.toISOString()
+        const loadedUsers = data.users.length > 0 ? data.users : DEFAULT_USERS;
+        setUsers(loadedUsers);
+        setProyectos(data.proyectos);
+        setTareas(data.tareas);
+        setActividades(data.actividades);
+        setAlertas(data.alertas);
+
+        if (data.users.length === 0) {
+          await dataRepository.upsertUsers(DEFAULT_USERS);
         }
-      ];
-      const mockActivities: Actividad[] = [
-        { id: 101, ID_Unico_Tarea: 'OT-1001-DesAPI', Title: 'Diseño de Base de Datos', IsStarted: true, IsCompleted: true, FechaInicio: yesterday.toISOString(), FechaFinalizacion: yesterday.toISOString(), fecha_creacion: yesterday.toISOString() },
-        { id: 102, ID_Unico_Tarea: 'OT-1001-DesAPI', Title: 'Configuración Servidor', IsStarted: true, IsCompleted: false, FechaInicio: yesterday.toISOString(), fecha_creacion: yesterday.toISOString() }
-      ];
-      setProyectos(mockProjects);
-      setTareas(mockTasks);
-      setActividades(mockActivities);
-      
-      setAlertas([
-        { id: 1, tipo: 'retraso_inicio', id_tarea: 1, mensaje: 'La tarea "Desarrollo API Central" tiene un retraso de 3 días en su inicio planeado.', activa: true }
-      ]);
-    }
-  }, []);
+      } catch (error) {
+        if (!active) return;
+        setDataError(error instanceof Error ? error.message : 'No fue posible cargar los datos.');
+      } finally {
+        if (active) setIsLoadingData(false);
+      }
+    };
+    loadData();
 
-  useEffect(() => {
-    if (proyectos.length > 0 || users.length > DEFAULT_USERS.length) {
-      localStorage.setItem('gestor_recursos_data', JSON.stringify({ users, proyectos, tareas, actividades, alertas }));
-    }
-  }, [users, proyectos, tareas, actividades, alertas]);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleLogout = () => {
     setCurrentUser(null);
@@ -81,70 +70,94 @@ export default function App() {
     setCurrentUser(user);
   };
 
-  const addTask = (taskData: Omit<Tarea, 'id' | 'Estado' | 'fecha_creacion'>) => {
-    const newTask: Tarea = {
-      ...taskData,
-      id: Date.now(),
-      Estado: 'DECK',
-      fecha_creacion: new Date().toISOString()
-    };
-    setTareas(prev => [...prev, newTask]);
+  const addProject = async (projectData: Omit<Proyecto, 'id' | 'Estado' | 'fecha_creacion'>) => {
+    const created = await dataRepository.createProject(projectData);
+    setProyectos(prev => [...prev, created]);
   };
 
-  const updateTaskStatus = (taskId: number, newStatus: ProjectStatus) => {
-    setTareas(prev => prev.map(t => {
-        if (t.id === taskId) {
-            const updates: Partial<Tarea> = { Estado: newStatus };
-            if (newStatus === 'FINALIZADA' && !t.FRealFin) {
-                updates.FRealFin = new Date().toISOString();
-            } else if (newStatus !== 'FINALIZADA' && t.FRealFin) {
-                updates.FRealFin = undefined;
-            }
-            return { ...t, ...updates };
-        }
-        return t;
-    }));
+  const deleteProject = async (projectId: number) => {
+    await dataRepository.deleteProject(projectId);
+    const deletedProject = proyectos.find((p) => p.id === projectId);
+    const deletedOT = deletedProject?.OT;
+    const deletedTaskIds = new Set(tareas.filter((t) => t.OT === deletedOT).map((t) => t.ID_Unico_Tarea));
+    setProyectos(prev => prev.filter((p) => p.id !== projectId));
+    setTareas(prev => prev.filter((t) => t.OT !== deletedOT));
+    setActividades(prev => prev.filter((a) => !deletedTaskIds.has(a.ID_Unico_Tarea)));
   };
 
-  const updateTaskDates = (taskId: number, updates: Partial<Tarea>) => {
-    setTareas(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
+  const addTask = async (taskData: Omit<Tarea, 'id' | 'Estado' | 'fecha_creacion'>) => {
+    const created = await dataRepository.createTask(taskData);
+    setTareas(prev => [...prev, created]);
   };
 
-  const updateProject = (projectId: number, updates: Partial<Proyecto>) => {
-    setProyectos(prev => prev.map(p => p.id === projectId ? { ...p, ...updates } : p));
+  const updateTaskStatus = async (taskId: number, newStatus: ProjectStatus) => {
+    const current = tareas.find((t) => t.id === taskId);
+    if (!current) return;
+    const updates: Partial<Tarea> = { Estado: newStatus };
+    if (newStatus === 'FINALIZADA' && !current.FRealFin) {
+      updates.FRealFin = new Date().toISOString();
+    } else if (newStatus !== 'FINALIZADA' && current.FRealFin) {
+      updates.FRealFin = undefined;
+    }
+    const updated = await dataRepository.updateTask(taskId, updates);
+    setTareas(prev => prev.map((t) => (t.id === taskId ? updated : t)));
   };
 
-  const addActivity = (taskId: string, title: string) => {
-    const newActivity: Actividad = {
-      id: Date.now(),
+  const updateTaskDates = async (taskId: number, updates: Partial<Tarea>) => {
+    const updated = await dataRepository.updateTask(taskId, updates);
+    setTareas(prev => prev.map((t) => (t.id === taskId ? updated : t)));
+  };
+
+  const updateProject = async (projectId: number, updates: Partial<Proyecto>) => {
+    const updated = await dataRepository.updateProject(projectId, updates);
+    setProyectos(prev => prev.map((p) => (p.id === projectId ? updated : p)));
+  };
+
+  const addActivity = async (taskId: string, title: string) => {
+    if (!title?.trim()) return;
+    const created = await dataRepository.createActivity({
       ID_Unico_Tarea: taskId,
-      Title: title,
-      IsStarted: false,
-      IsCompleted: false,
-      fecha_creacion: new Date().toISOString()
-    };
-    setActividades(prev => [...prev, newActivity]);
+      Title: title.trim()
+    });
+    setActividades(prev => [...prev, created]);
   };
 
-  const toggleActivity = (activityId: number, field: 'IsStarted' | 'IsCompleted') => {
-    setActividades(prev => prev.map(a => {
-      if (a.id === activityId) {
-        const newVal = !a[field];
-        const update: Partial<Actividad> = { [field]: newVal };
-        
-        if (field === 'IsStarted' && newVal) update.FechaInicio = new Date().toISOString();
-        if (field === 'IsCompleted') {
-            update.FechaFinalizacion = newVal ? new Date().toISOString() : undefined;
-        }
-        
-        return { ...a, ...update };
-      }
-      return a;
-    }));
+  const toggleActivity = async (activityId: number, field: 'IsStarted' | 'IsCompleted') => {
+    const current = actividades.find((a) => a.id === activityId);
+    if (!current) return;
+
+    const newVal = !current[field];
+    const updates: Partial<Actividad> = { [field]: newVal };
+
+    if (field === 'IsStarted' && newVal) {
+      updates.FechaInicio = new Date().toISOString();
+    }
+    if (field === 'IsCompleted') {
+      updates.FechaFinalizacion = newVal ? new Date().toISOString() : undefined;
+    }
+
+    const updated = await dataRepository.updateActivity(activityId, updates);
+    setActividades(prev => prev.map((a) => (a.id === activityId ? updated : a)));
   };
+
+  if (isLoadingData) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+        <div className="bg-white rounded-2xl border border-slate-200 px-8 py-6 text-slate-600 text-sm font-bold">
+          Cargando datos desde {isSupabaseConfigured ? 'Supabase' : 'almacenamiento local'}...
+        </div>
+      </div>
+    );
+  }
 
   if (!currentUser) {
-    return <LoginScreen onLogin={handleLogin} />;
+    return (
+      <LoginScreen
+        onLogin={handleLogin}
+        users={users}
+        infoMessage={dataError ?? (!isSupabaseConfigured ? 'Supabase no configurado, usando almacenamiento local.' : null)}
+      />
+    );
   }
 
   return (
@@ -163,9 +176,9 @@ export default function App() {
           <ProjectList 
             proyectos={proyectos} 
             users={users} 
-            onAddProject={(p) => setProyectos([...proyectos, {...p, id: Date.now(), Estado: 'DECK', fecha_creacion: new Date().toISOString()}])} 
-            onUpdateProject={updateProject}
-            onDeleteProject={(id) => setProyectos(proyectos.filter(p => p.id !== id))} 
+            onAddProject={(p) => void addProject(p)}
+            onUpdateProject={(id, updates) => void updateProject(id, updates)}
+            onDeleteProject={(id) => void deleteProject(id)}
           />
         )}
         {activeTab === 'tareas' && (
@@ -174,11 +187,11 @@ export default function App() {
             actividades={actividades} 
             proyectos={proyectos} 
             users={users} 
-            onAddTask={addTask}
-            onUpdateTaskStatus={updateTaskStatus}
-            onUpdateTaskDates={updateTaskDates}
-            onAddActivity={addActivity}
-            onToggleActivity={toggleActivity}
+            onAddTask={(task) => void addTask(task)}
+            onUpdateTaskStatus={(id, status) => void updateTaskStatus(id, status)}
+            onUpdateTaskDates={(id, updates) => void updateTaskDates(id, updates)}
+            onAddActivity={(taskId, title) => void addActivity(taskId, title)}
+            onToggleActivity={(activityId, field) => void toggleActivity(activityId, field)}
           />
         )}
         {activeTab === 'reportes' && (

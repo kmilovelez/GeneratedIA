@@ -9,15 +9,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "lucide-react": "^0.563.0",
+    "@azure/msal-browser": "^5.0.2",
     "@google/genai": "^1.38.0",
+    "@supabase/supabase-js": "^2.95.3",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
-    "xlsx": "^0.18.5",
-    "@azure/msal-browser": "^5.0.2",
-    "recharts": "^2.12.7"
+    "lucide-react": "^0.563.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "recharts": "^2.12.7",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

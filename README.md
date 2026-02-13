@@ -15,6 +15,25 @@ View your app in AI Studio: https://ai.studio/apps/drive/1teVT_ZFK1C8wxuN6s31Rvo
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+2. Set environment variables in `.env.local`:
+   - `GEMINI_API_KEY`
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
 3. Run the app:
    `npm run dev`
+
+## Supabase Data Model
+
+The app now supports Supabase as the data repository for:
+- `users`
+- `lineas_negocio`
+- `disciplinas`
+- `proyectos`
+- `tareas`
+- `actividades`
+- `alertas`
+
+Create the schema from:
+- `supabase/schema.sql`
+
+If `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` are missing, the app falls back to local storage.

@@ -1,14 +1,16 @@
 
 import React from 'react';
-import { User, Role } from '../../types/index';
+import { User } from '../../types/index';
 import { ShieldCheck, UserCircle2, ChevronRight } from 'lucide-react';
-import { DEFAULT_USERS, getRoleBadgeColor } from '../../lib/utils';
+import { getRoleBadgeColor } from '../../lib/utils';
 
 interface LoginScreenProps {
   onLogin: (user: User) => void;
+  users: User[];
+  infoMessage?: string | null;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, users, infoMessage }) => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
       <div className="bg-white max-w-md w-full rounded-2xl shadow-2xl overflow-hidden">
@@ -22,12 +24,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         <div className="p-8 bg-slate-50 space-y-6">
           <div className="text-sm text-slate-600 bg-amber-50 p-4 rounded-xl border border-amber-100 flex gap-3">
              <ShieldCheck className="text-amber-600 shrink-0" size={20} />
-             <p>Modo demostración. Seleccione un perfil para ingresar al sistema.</p>
+             <p>{infoMessage || 'Modo demostracion. Seleccione un perfil para ingresar al sistema.'}</p>
           </div>
           
           <div className="space-y-3">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Usuarios Disponibles</p>
-            {DEFAULT_USERS.map((user) => (
+            {users.map((user) => (
               <button
                 key={user.id}
                 onClick={() => onLogin(user)}
@@ -48,7 +50,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           </div>
           
           <p className="text-center text-xs text-slate-400 mt-4">
-            Sistema local. No se requiere conexión a internet.
+            {infoMessage ? 'Verifica la configuracion para operar en modo remoto.' : 'Selecciona un perfil para comenzar.'}
           </p>
         </div>
       </div>
