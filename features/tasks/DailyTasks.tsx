@@ -29,7 +29,6 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
   const [newTaskForm, setNewTaskForm] = useState({
     Title: '',
     OT: proyectos[0]?.OT || '',
-    ID_Unico_Tarea: '',
     ID_Disciplina: 1,
     ID_Ejecutor: users.find(u => u.rol === 'ejecutor')?.id || users[0].id,
     GerenteTarea: users.find(u => u.rol === 'gerente_tarea')?.id || users[0].id,
@@ -38,6 +37,8 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
     FEsperadaIni: '',
     FEsperadaFin: '',
   });
+
+  const generatedTaskId = `${newTaskForm.OT.trim()}-${newTaskForm.Title.trim()}`;
 
   const gerentesDisponibles = useMemo(() => 
     users.filter(u => u.rol === 'gerente_tarea'),
@@ -56,13 +57,13 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
     e.preventDefault();
     onAddTask({
       ...newTaskForm,
+      ID_Unico_Tarea: generatedTaskId,
       FPlaneadaInicioAct: newTaskForm.FPlaneadaInicioOrig,
       FPlaneadaFinAct: newTaskForm.FPlaneadaFinOrig,
     });
     setNewTaskForm({
       ...newTaskForm,
       Title: '',
-      ID_Unico_Tarea: '',
       FPlaneadaInicioOrig: '',
       FPlaneadaFinOrig: '',
       FEsperadaIni: '',
@@ -117,12 +118,12 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsAddingTask(false)} />
           <form onSubmit={handleCreateTask} className="relative bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-2xl animate-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh] custom-scrollbar">
-            <h4 className="font-black text-xl text-slate-800 mb-6 flex items-center gap-2"><Plus className="text-blue-600" /> Nueva Tarea (SharePoint Sync)</h4>
+            <h4 className="font-black text-xl text-slate-800 mb-6 flex items-center gap-2"><Plus className="text-blue-600" /> Nueva Tarea</h4>
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-5">
                 <div className="space-y-2">
                   <label className="text-[11px] font-black uppercase text-slate-400">ID Único Tarea</label>
-                  <input type="text" className="w-full p-4 border border-slate-200 rounded-2xl text-sm font-semibold" required value={newTaskForm.ID_Unico_Tarea} onChange={e => setNewTaskForm({...newTaskForm, ID_Unico_Tarea: e.target.value})} placeholder="Ej: OT1001-Hito1" />
+                  <input type="text" className="w-full p-4 border border-slate-200 rounded-2xl text-sm font-semibold bg-slate-50 text-slate-600" value={generatedTaskId} readOnly placeholder="Se genera automaticamente: OT-NombreTarea" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[11px] font-black uppercase text-slate-400">OT Proyecto</label>

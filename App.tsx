@@ -28,37 +28,30 @@ export default function App() {
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
 
-  useEffect(() => {
-    let active = true;
-    const loadData = async () => {
-      setIsLoadingData(true);
-      setDataError(null);
-      try {
-        const data = await dataRepository.getAllData();
-        if (!active) return;
+  const reloadData = async () => {
+    setIsLoadingData(true);
+    setDataError(null);
+    try {
+      const data = await dataRepository.getAllData();
+      const loadedUsers = data.users.length > 0 ? data.users : DEFAULT_USERS;
+      setUsers(loadedUsers);
+      setProyectos(data.proyectos);
+      setTareas(data.tareas);
+      setActividades(data.actividades);
+      setAlertas(data.alertas);
 
-        const loadedUsers = data.users.length > 0 ? data.users : DEFAULT_USERS;
-        setUsers(loadedUsers);
-        setProyectos(data.proyectos);
-        setTareas(data.tareas);
-        setActividades(data.actividades);
-        setAlertas(data.alertas);
-
-        if (data.users.length === 0) {
-          await dataRepository.upsertUsers(DEFAULT_USERS);
-        }
-      } catch (error) {
-        if (!active) return;
-        setDataError(error instanceof Error ? error.message : 'No fue posible cargar los datos.');
-      } finally {
-        if (active) setIsLoadingData(false);
+      if (data.users.length === 0) {
+        await dataRepository.upsertUsers(DEFAULT_USERS);
       }
-    };
-    loadData();
+    } catch (error) {
+      setDataError(error instanceof Error ? error.message : 'No fue posible cargar los datos.');
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
 
-    return () => {
-      active = false;
-    };
+  useEffect(() => {
+    void reloadData();
   }, []);
 
   const handleLogout = () => {
@@ -70,7 +63,7 @@ export default function App() {
     setCurrentUser(user);
   };
 
-  const addProject = async (projectData: Omit<Proyecto, 'id' | 'Estado' | 'fecha_creacion'>) => {
+  const addProject = async (projectData: Omit<Proyecto, 'id' | 'fecha_creacion'>) => {
     const created = await dataRepository.createProject(projectData);
     setProyectos(prev => [...prev, created]);
   };
@@ -86,7 +79,7 @@ export default function App() {
   };
 
   const addTask = async (taskData: Omit<Tarea, 'id' | 'Estado' | 'fecha_creacion'>) => {
-    const created = await dataRepository.createTask(taskData);
+    const created = await dataRepository.createTask({ ...taskData, Estado: 'DECK' });
     setTareas(prev => [...prev, created]);
   };
 
@@ -209,7 +202,7 @@ export default function App() {
             actividades={actividades} 
           />
         )}
-        {activeTab === 'import' && <ImportView />}
+        {activeTab === 'import' && <ImportView onImportSuccess={() => reloadData()} />}
         {activeTab === 'admin' && <AdminView users={users} />}
       </main>
     </div>

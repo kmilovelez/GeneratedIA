@@ -37,3 +37,11 @@ Create the schema from:
 - `supabase/schema.sql`
 
 If `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` are missing, the app falls back to local storage.
+
+## Import Fixture For Production
+
+This repo includes CSV seeds under `data/` and a generated one-sheet import file:
+- `public/datos_prueba_importacion.xlsx`
+
+To regenerate the file after updating CSV seeds:
+- `node scripts/generate-production-import-file.mjs`

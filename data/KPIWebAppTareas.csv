@@ -1,0 +1,8 @@
+﻿ListSchema={"schemaXmlList":[]}"Title","OT","ID_Disciplina","GerenteTarea","ID_Ejecutor","Estado","RazonRetraso","FPlaneadaInicioOrig","FPlaneadaFinOrig","FPlaneadaInicioAct","FPlaneadaFinAct","FRealInicio","FRealFin","ID_Unico_Tarea","ID"
+"Programación PLC","T2540P","Control","gposada@matec.com.co","phoyos@matec.com.co","WIP","0",,,,,,,"T2540P-Programación PLC","1"
+"Montaje","T2436P","Control","marias@matec.com.co","dgonzalez@matec.com.co","WIP","0",,,,,,,"T2436P-Montaje","2"
+"Programacion PLC","T2534P","Control","eusma@matec.com.co","jdgaviria@matec.com.co","WIP","0",,,,,,,"T2534P-Programacion PLC","3"
+"Montaje","T2504P","Control","gposada@matec.com.co","ju.osorio@matec.com.co","WIP",,,,,,,,"T2504P-Montaje","4"
+"Progamacion PLC","T2546P","Control","gposada@matec.com.co","mmazo@matec.com.co","WIP",,,,,,,,"T2546P-Progamacion PLC","5"
+"Programacion PLC","T2543P","Control","mcadavid@matec.com.co","mquintero@matec.com.co","WIP",,,,,,,,"T2543P-Programacion PLC","6"
+"Montaje","T2520P","Control","mcadavid@matec.com.co","ma.cadavid@matec.com.co","DECK",,,,,,,,"T2520P-Montaje","7"

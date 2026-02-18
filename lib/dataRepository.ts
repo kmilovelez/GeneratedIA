@@ -12,8 +12,8 @@ type AppData = {
   alertas: Alerta[];
 };
 
-type NewProject = Omit<Proyecto, 'id' | 'Estado' | 'fecha_creacion'>;
-type NewTask = Omit<Tarea, 'id' | 'Estado' | 'fecha_creacion'>;
+type NewProject = Omit<Proyecto, 'id' | 'fecha_creacion'>;
+type NewTask = Omit<Tarea, 'id' | 'fecha_creacion'>;
 type NewActivity = Pick<Actividad, 'ID_Unico_Tarea' | 'Title'>;
 
 type DbUser = {
@@ -127,7 +127,8 @@ const toDbProjectInsert = (project: NewProject) => ({
   title: project.Title,
   ot: project.OT,
   id_linea_negocio: project.ID_LineaNegocio,
-  id_gerente_proyecto: project.ID_GerenteProyecto
+  id_gerente_proyecto: project.ID_GerenteProyecto,
+  estado: project.Estado
 });
 
 const toDbProjectUpdate = (updates: Partial<Proyecto>) => ({
@@ -144,6 +145,7 @@ const toDbTaskInsert = (task: NewTask) => ({
   id_disciplina: task.ID_Disciplina,
   id_gerente_tarea: task.GerenteTarea,
   id_ejecutor: task.ID_Ejecutor,
+  estado: task.Estado,
   f_planeada_inicio_orig: task.FPlaneadaInicioOrig,
   f_planeada_fin_orig: task.FPlaneadaFinOrig,
   f_planeada_inicio_act: task.FPlaneadaInicioAct,
@@ -270,7 +272,6 @@ export const dataRepository = {
       const created: Proyecto = {
         ...project,
         id: Date.now(),
-        Estado: 'DECK',
         fecha_creacion: new Date().toISOString()
       };
       setLocalData({ ...local, proyectos: [...local.proyectos, created] });
@@ -334,7 +335,6 @@ export const dataRepository = {
       const created: Tarea = {
         ...task,
         id: Date.now(),
-        Estado: 'DECK',
         fecha_creacion: new Date().toISOString()
       };
       setLocalData({ ...local, tareas: [...local.tareas, created] });

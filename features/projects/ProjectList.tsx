@@ -1,12 +1,14 @@
 
 import React, { useState, useMemo } from 'react';
-import { Plus, Trash2, Edit2, X, Briefcase, Hash, UserCheck } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Briefcase, Hash, UserCheck, Building2, Layers } from 'lucide-react';
 import { Proyecto, User, ProjectStatus } from '../../types/index';
+import { INITIAL_LINEAS } from '../../lib/utils';
+import { getStatusColor } from '../../lib/utils';
 
 interface ProjectListProps {
   proyectos: Proyecto[];
   users: User[];
-  onAddProject: (project: Omit<Proyecto, 'id' | 'Estado' | 'fecha_creacion'>) => void;
+  onAddProject: (project: Omit<Proyecto, 'id' | 'fecha_creacion'>) => void;
   onUpdateProject: (id: number, updates: Partial<Proyecto>) => void;
   onDeleteProject: (id: number) => void;
 }
@@ -20,6 +22,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
     OT: '',
     ID_LineaNegocio: 1,
     ID_GerenteProyecto: users.find(u => u.rol === 'gerente_proyecto')?.id || users[0]?.id || 1,
+    Estado: 'DECK' as ProjectStatus,
   };
 
   const [projectForm, setProjectForm] = useState(initialFormState);
@@ -40,7 +43,8 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
       Title: project.Title,
       OT: project.OT,
       ID_LineaNegocio: project.ID_LineaNegocio,
-      ID_GerenteProyecto: project.ID_GerenteProyecto
+      ID_GerenteProyecto: project.ID_GerenteProyecto,
+      Estado: project.Estado
     });
     setEditingProjectId(project.id);
     setIsProjectModalOpen(true);
@@ -54,7 +58,8 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
       Title: projectForm.Title,
       OT: projectForm.OT,
       ID_LineaNegocio: projectForm.ID_LineaNegocio,
-      ID_GerenteProyecto: projectForm.ID_GerenteProyecto
+      ID_GerenteProyecto: projectForm.ID_GerenteProyecto,
+      Estado: projectForm.Estado
     };
 
     if (editingProjectId) {
@@ -148,6 +153,37 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
                 </select>
               </div>
 
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest ml-1 flex items-center gap-2">
+                  <Building2 size={12} /> Linea de Negocio
+                </label>
+                <select
+                  className="w-full p-4 bg-white text-slate-900 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-50 transition-all text-sm font-semibold appearance-none shadow-sm cursor-pointer"
+                  value={projectForm.ID_LineaNegocio}
+                  onChange={e => setProjectForm({ ...projectForm, ID_LineaNegocio: Number(e.target.value) })}
+                >
+                  {INITIAL_LINEAS.map(linea => (
+                    <option key={linea.id} value={linea.id}>{linea.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[11px] font-black uppercase text-slate-400 tracking-widest ml-1 flex items-center gap-2">
+                  <Layers size={12} /> Estado
+                </label>
+                <select
+                  className="w-full p-4 bg-white text-slate-900 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-50 transition-all text-sm font-semibold appearance-none shadow-sm cursor-pointer"
+                  value={projectForm.Estado}
+                  onChange={e => setProjectForm({ ...projectForm, Estado: e.target.value as ProjectStatus })}
+                >
+                  <option value="DECK">DECK</option>
+                  <option value="WIP">WIP</option>
+                  <option value="FROZEN">FROZEN</option>
+                  <option value="FINALIZADA">FINALIZADA</option>
+                </select>
+              </div>
+
               <div className="pt-4 flex gap-3">
                  <button 
                    type="button"
@@ -174,13 +210,16 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
             <tr className="bg-slate-50/50">
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Proyecto</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">OT</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Linea de Negocio</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Gerente de Proyecto</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Estado</th>
               <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {proyectos.map(p => {
               const manager = users.find(u => u.id === p.ID_GerenteProyecto);
+              const linea = INITIAL_LINEAS.find(l => l.id === p.ID_LineaNegocio);
               return (
                 <tr key={p.id} className="group hover:bg-slate-50/30 transition-colors">
                   <td className="px-8 py-6">
@@ -195,12 +234,20 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
                     <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">{p.OT}</span>
                   </td>
                   <td className="px-8 py-6">
+                    <span className="text-xs font-semibold text-slate-600">{linea?.nombre || 'No asignada'}</span>
+                  </td>
+                  <td className="px-8 py-6">
                     <div className="flex items-center gap-2">
                        <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500 uppercase">
                           {manager?.nombre.substring(0, 2)}
                        </div>
                        <span className="text-xs font-semibold text-slate-600">{manager?.nombre || 'No asignado'}</span>
                     </div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-lg border ${getStatusColor(p.Estado)}`}>
+                      {p.Estado}
+                    </span>
                   </td>
                   <td className="px-8 py-6 text-right">
                     <div className="flex items-center justify-end gap-2">
