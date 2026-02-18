@@ -63,6 +63,27 @@ export default function App() {
     setCurrentUser(user);
   };
 
+  const createUser = async (userData: Omit<User, 'id'>) => {
+    const created = await dataRepository.createUser(userData);
+    setUsers((prev) => [...prev, created]);
+  };
+
+  const updateUser = async (userId: number, updates: Partial<Omit<User, 'id'>>) => {
+    const updated = await dataRepository.updateUser(userId, updates);
+    setUsers((prev) => prev.map((u) => (u.id === userId ? updated : u)));
+    if (currentUser?.id === userId) {
+      setCurrentUser(updated);
+    }
+  };
+
+  const deleteUser = async (userId: number) => {
+    await dataRepository.deleteUser(userId);
+    setUsers((prev) => prev.filter((u) => u.id !== userId));
+    if (currentUser?.id === userId) {
+      handleLogout();
+    }
+  };
+
   const addProject = async (projectData: Omit<Proyecto, 'id' | 'fecha_creacion'>) => {
     const created = await dataRepository.createProject(projectData);
     setProyectos(prev => [...prev, created]);
@@ -203,7 +224,14 @@ export default function App() {
           />
         )}
         {activeTab === 'import' && <ImportView onImportSuccess={() => reloadData()} />}
-        {activeTab === 'admin' && <AdminView users={users} />}
+        {activeTab === 'admin' && (
+          <AdminView
+            users={users}
+            onCreateUser={(user) => void createUser(user)}
+            onUpdateUser={(id, updates) => void updateUser(id, updates)}
+            onDeleteUser={(id) => void deleteUser(id)}
+          />
+        )}
       </main>
     </div>
   );

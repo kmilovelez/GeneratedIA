@@ -15,6 +15,7 @@ type AppData = {
 type NewProject = Omit<Proyecto, 'id' | 'fecha_creacion'>;
 type NewTask = Omit<Tarea, 'id' | 'fecha_creacion'>;
 type NewActivity = Pick<Actividad, 'ID_Unico_Tarea' | 'Title'>;
+type NewUser = Omit<User, 'id'>;
 
 type DbUser = {
   id: number;
@@ -263,6 +264,60 @@ export const dataRepository = {
 
     const client = assertSupabase();
     const { error } = await client.from('users').upsert(users, { onConflict: 'id' });
+    if (error) throw error;
+  },
+
+  async createUser(user: NewUser): Promise<User> {
+    if (!isSupabaseConfigured) {
+      const local = getLocalData();
+      const nextId = local.users.reduce((max, u) => Math.max(max, u.id), 0) + 1;
+      const created: User = { id: nextId, ...user };
+      setLocalData({ ...local, users: [...local.users, created] });
+      return created;
+    }
+
+    const client = assertSupabase();
+    const { data, error } = await client.from('users').insert(user).select('*').single();
+    if (error) throw error;
+    return toAppUser(data as DbUser);
+  },
+
+  async updateUser(userId: number, updates: Partial<NewUser>): Promise<User> {
+    if (!isSupabaseConfigured) {
+      const local = getLocalData();
+      const current = local.users.find((u) => u.id === userId);
+      if (!current) throw new Error('Usuario no encontrado.');
+      const merged: User = { ...current, ...updates };
+      setLocalData({
+        ...local,
+        users: local.users.map((u) => (u.id === userId ? merged : u))
+      });
+      return merged;
+    }
+
+    const client = assertSupabase();
+    const { data, error } = await client
+      .from('users')
+      .update(updates)
+      .eq('id', userId)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return toAppUser(data as DbUser);
+  },
+
+  async deleteUser(userId: number): Promise<void> {
+    if (!isSupabaseConfigured) {
+      const local = getLocalData();
+      setLocalData({
+        ...local,
+        users: local.users.filter((u) => u.id !== userId)
+      });
+      return;
+    }
+
+    const client = assertSupabase();
+    const { error } = await client.from('users').delete().eq('id', userId);
     if (error) throw error;
   },
 
