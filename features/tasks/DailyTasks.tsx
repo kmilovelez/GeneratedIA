@@ -25,6 +25,7 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
   
   const [filterDisciplina, setFilterDisciplina] = useState<string>('all');
   const [filterGerente, setFilterGerente] = useState<string>('all');
+  const [filterEstado, setFilterEstado] = useState<'all' | ProjectStatus>('all');
 
   const [newTaskForm, setNewTaskForm] = useState({
     Title: '',
@@ -49,9 +50,10 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
     return tareas.filter(t => {
       const matchDisciplina = filterDisciplina === 'all' || t.ID_Disciplina === Number(filterDisciplina);
       const matchGerente = filterGerente === 'all' || t.GerenteTarea === Number(filterGerente);
-      return matchDisciplina && matchGerente;
+      const matchEstado = filterEstado === 'all' || t.Estado === filterEstado;
+      return matchDisciplina && matchGerente && matchEstado;
     });
-  }, [tareas, filterDisciplina, filterGerente]);
+  }, [tareas, filterDisciplina, filterGerente, filterEstado]);
 
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,6 +109,15 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
             {gerentesDisponibles.map(g => (
               <option key={g.id} value={g.id}>{g.nombre}</option>
             ))}
+          </select>
+        </div>
+        <div className="relative flex-1 min-w-[220px]">
+          <select value={filterEstado} onChange={(e) => setFilterEstado(e.target.value as 'all' | ProjectStatus)} className="w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 outline-none">
+            <option value="all">Todos los Estados</option>
+            <option value="DECK">DECK</option>
+            <option value="WIP">WIP</option>
+            <option value="FROZEN">FROZEN</option>
+            <option value="FINALIZADA">FINALIZADA</option>
           </select>
         </div>
         <div className="ml-auto px-5 py-2.5 bg-slate-100 rounded-2xl border border-slate-200">

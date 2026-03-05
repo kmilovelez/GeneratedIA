@@ -27,6 +27,7 @@ export default function App() {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
+  const canManageUsers = currentUser?.rol === 'administrador' || currentUser?.rol === 'gerente_proyecto';
 
   const reloadData = async () => {
     setIsLoadingData(true);
@@ -61,6 +62,11 @@ export default function App() {
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
+    if (user.rol === 'administrador' || user.rol === 'gerente_proyecto') {
+      setActiveTab('admin');
+    } else {
+      setActiveTab('dashboard');
+    }
   };
 
   const createUser = async (userData: Omit<User, 'id'>) => {
@@ -180,6 +186,7 @@ export default function App() {
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         currentUser={currentUser} 
+        canManageUsers={canManageUsers}
         onLogout={handleLogout} 
       />
       <main className="flex-1 ml-64 p-8">
@@ -224,7 +231,7 @@ export default function App() {
           />
         )}
         {activeTab === 'import' && <ImportView onImportSuccess={() => reloadData()} />}
-        {activeTab === 'admin' && (
+        {activeTab === 'admin' && canManageUsers && (
           <AdminView
             users={users}
             onCreateUser={(user) => void createUser(user)}

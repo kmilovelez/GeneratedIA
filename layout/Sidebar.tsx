@@ -7,10 +7,11 @@ interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: 'dashboard' | 'proyectos' | 'tareas' | 'reportes' | 'historicos' | 'admin' | 'import') => void;
   currentUser: User;
+  canManageUsers: boolean;
   onLogout: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, currentUser, onLogout }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, currentUser, canManageUsers, onLogout }) => {
   return (
     <div className="w-64 bg-slate-100 text-slate-900 border-r border-slate-200 h-screen flex flex-col fixed left-0 top-0 z-50">
       <div className="p-6 border-b border-slate-200 flex items-center gap-3">
@@ -39,9 +40,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, curre
         <button onClick={() => setActiveTab('import')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition ${activeTab === 'import' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-200'}`}>
           <Upload size={18} /> Importar Datos
         </button>
-        {currentUser.rol === 'administrador' && (
+        {canManageUsers && (
           <button onClick={() => setActiveTab('admin')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition ${activeTab === 'admin' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-200'}`}>
-            <Settings size={18} /> Administración
+            <Settings size={18} /> Gestion de Usuarios
           </button>
         )}
       </nav>
