@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, CheckSquare, Send, CheckCircle2, Calendar, Layers, PauseCircle, PlayCircle, Filter, Users, X, Briefcase, Hash, UserCheck } from 'lucide-react';
 import { Tarea, Actividad, Proyecto, User, ProjectStatus } from '../../types/index';
-import { INITIAL_DISCIPLINAS, getStatusColor, getStatusIcon, formatDate } from '../../lib/utils';
+import { INITIAL_DISCIPLINAS, INITIAL_LINEAS, getStatusColor, getStatusIcon, formatDate } from '../../lib/utils';
 
 interface DailyTasksProps {
   tareas: Tarea[];
@@ -23,9 +23,10 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
   const [newActivityInput, setNewActivityInput] = useState<{ [key: string]: string }>({});
   const [isAddingTask, setIsAddingTask] = useState(false);
   
-  const [filterDisciplina, setFilterDisciplina] = useState<string>('all');
-  const [filterGerente, setFilterGerente] = useState<string>('all');
-  const [filterEstado, setFilterEstado] = useState<'all' | ProjectStatus>('all');
+  const [filterDisciplinas, setFilterDisciplinas] = useState<number[]>([]);
+  const [filterGerentes, setFilterGerentes] = useState<number[]>([]);
+  const [filterEstados, setFilterEstados] = useState<ProjectStatus[]>([]);
+  const [filterLineasNegocio, setFilterLineasNegocio] = useState<number[]>([]);
 
   const [newTaskForm, setNewTaskForm] = useState({
     Title: '',
@@ -46,14 +47,66 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
     [users]
   );
 
+  const proyectosByOt = useMemo(() => {
+    return new Map(proyectos.map((project) => [project.OT, project]));
+  }, [proyectos]);
+
+  const allDisciplinaIds = useMemo(() => INITIAL_DISCIPLINAS.map((d) => d.id), []);
+  const allGerenteIds = useMemo(() => gerentesDisponibles.map((g) => g.id), [gerentesDisponibles]);
+  const allEstadoValues: ProjectStatus[] = ['DECK', 'WIP', 'FROZEN', 'FINALIZADA'];
+  const allLineaIds = useMemo(() => INITIAL_LINEAS.map((l) => l.id), []);
+
+  const toggleNumberFilter = (
+    value: number,
+    selected: number[],
+    allValues: number[],
+    setSelected: React.Dispatch<React.SetStateAction<number[]>>
+  ) => {
+    if (selected.length === 0) {
+      const next = allValues.filter((item) => item !== value);
+      setSelected(next.length === allValues.length ? [] : next);
+      return;
+    }
+
+    if (selected.includes(value)) {
+      const next = selected.filter((item) => item !== value);
+      setSelected(next.length === 0 ? [] : next);
+      return;
+    }
+
+    const next = [...selected, value];
+    setSelected(next.length === allValues.length ? [] : next);
+  };
+
+  const toggleStatusFilter = (value: ProjectStatus) => {
+    if (filterEstados.length === 0) {
+      const next = allEstadoValues.filter((item) => item !== value);
+      setFilterEstados(next.length === allEstadoValues.length ? [] : next);
+      return;
+    }
+
+    if (filterEstados.includes(value)) {
+      const next = filterEstados.filter((item) => item !== value);
+      setFilterEstados(next.length === 0 ? [] : next);
+      return;
+    }
+
+    const next = [...filterEstados, value];
+    setFilterEstados(next.length === allEstadoValues.length ? [] : next);
+  };
+
   const tareasFiltradas = useMemo(() => {
     return tareas.filter(t => {
-      const matchDisciplina = filterDisciplina === 'all' || t.ID_Disciplina === Number(filterDisciplina);
-      const matchGerente = filterGerente === 'all' || t.GerenteTarea === Number(filterGerente);
-      const matchEstado = filterEstado === 'all' || t.Estado === filterEstado;
-      return matchDisciplina && matchGerente && matchEstado;
+      const project = proyectosByOt.get(t.OT);
+      const matchDisciplina = filterDisciplinas.length === 0 || filterDisciplinas.includes(t.ID_Disciplina);
+      const matchGerente = filterGerentes.length === 0 || filterGerentes.includes(t.GerenteTarea);
+      const matchEstado = filterEstados.length === 0 || filterEstados.includes(t.Estado);
+      const matchLineaNegocio =
+        filterLineasNegocio.length === 0 ||
+        (project ? filterLineasNegocio.includes(project.ID_LineaNegocio) : false);
+      return matchDisciplina && matchGerente && matchEstado && matchLineaNegocio;
     });
-  }, [tareas, filterDisciplina, filterGerente, filterEstado]);
+  }, [tareas, proyectosByOt, filterDisciplinas, filterGerentes, filterEstados, filterLineasNegocio]);
 
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,31 +148,77 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
           <Filter size={18} />
           <span className="text-[10px] font-black uppercase tracking-widest">Filtros</span>
         </div>
-        <div className="relative flex-1 min-w-[220px]">
-          <select value={filterDisciplina} onChange={(e) => setFilterDisciplina(e.target.value)} className="w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 outline-none">
-            <option value="all">Todas las Disciplinas</option>
+        <details className="relative flex-1 min-w-[220px]">
+          <summary className="list-none cursor-pointer w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 outline-none">
+            Disciplina ({filterDisciplinas.length === 0 ? 'Todas' : filterDisciplinas.length})
+          </summary>
+          <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 max-h-64 overflow-y-auto">
             {INITIAL_DISCIPLINAS.map(d => (
-              <option key={d.id} value={d.id}>{d.nombre}</option>
+              <label key={d.id} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filterDisciplinas.length === 0 || filterDisciplinas.includes(d.id)}
+                  onChange={() => toggleNumberFilter(d.id, filterDisciplinas, allDisciplinaIds, setFilterDisciplinas)}
+                />
+                {d.nombre}
+              </label>
             ))}
-          </select>
-        </div>
-        <div className="relative flex-1 min-w-[220px]">
-          <select value={filterGerente} onChange={(e) => setFilterGerente(e.target.value)} className="w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 outline-none">
-            <option value="all">Todos los Gerentes</option>
+          </div>
+        </details>
+
+        <details className="relative flex-1 min-w-[220px]">
+          <summary className="list-none cursor-pointer w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 outline-none">
+            Gerente ({filterGerentes.length === 0 ? 'Todos' : filterGerentes.length})
+          </summary>
+          <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 max-h-64 overflow-y-auto">
             {gerentesDisponibles.map(g => (
-              <option key={g.id} value={g.id}>{g.nombre}</option>
+              <label key={g.id} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filterGerentes.length === 0 || filterGerentes.includes(g.id)}
+                  onChange={() => toggleNumberFilter(g.id, filterGerentes, allGerenteIds, setFilterGerentes)}
+                />
+                {g.nombre}
+              </label>
             ))}
-          </select>
-        </div>
-        <div className="relative flex-1 min-w-[220px]">
-          <select value={filterEstado} onChange={(e) => setFilterEstado(e.target.value as 'all' | ProjectStatus)} className="w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 outline-none">
-            <option value="all">Todos los Estados</option>
-            <option value="DECK">DECK</option>
-            <option value="WIP">WIP</option>
-            <option value="FROZEN">FROZEN</option>
-            <option value="FINALIZADA">FINALIZADA</option>
-          </select>
-        </div>
+          </div>
+        </details>
+
+        <details className="relative flex-1 min-w-[220px]">
+          <summary className="list-none cursor-pointer w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 outline-none">
+            Estado ({filterEstados.length === 0 ? 'Todos' : filterEstados.length})
+          </summary>
+          <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 max-h-64 overflow-y-auto">
+            {allEstadoValues.map((estado) => (
+              <label key={estado} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filterEstados.length === 0 || filterEstados.includes(estado)}
+                  onChange={() => toggleStatusFilter(estado)}
+                />
+                {estado}
+              </label>
+            ))}
+          </div>
+        </details>
+
+        <details className="relative flex-1 min-w-[220px]">
+          <summary className="list-none cursor-pointer w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 outline-none">
+            Linea de Negocio ({filterLineasNegocio.length === 0 ? 'Todas' : filterLineasNegocio.length})
+          </summary>
+          <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 max-h-64 overflow-y-auto">
+            {INITIAL_LINEAS.map(linea => (
+              <label key={linea.id} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filterLineasNegocio.length === 0 || filterLineasNegocio.includes(linea.id)}
+                  onChange={() => toggleNumberFilter(linea.id, filterLineasNegocio, allLineaIds, setFilterLineasNegocio)}
+                />
+                {linea.nombre}
+              </label>
+            ))}
+          </div>
+        </details>
         <div className="ml-auto px-5 py-2.5 bg-slate-100 rounded-2xl border border-slate-200">
            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total: {tareasFiltradas.length}</span>
         </div>
