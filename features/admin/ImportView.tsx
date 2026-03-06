@@ -11,6 +11,7 @@ type ImportViewProps = {
 type ImportedProject = Omit<Proyecto, 'id' | 'fecha_creacion'>;
 type ImportedTask = Omit<Tarea, 'id' | 'fecha_creacion'>;
 type ImportedActivity = Pick<Actividad, 'ID_Unico_Tarea' | 'Title' | 'IsStarted' | 'IsCompleted' | 'FechaInicio' | 'FechaFinalizacion' | 'ID_Tarea_Legacy' | 'razon_no_cumplimiento'>;
+type CurrentData = Awaited<ReturnType<typeof dataRepository.getAllData>>;
 
 const EXPECTED_HEADERS = [
   'Proyecto_Title',
@@ -213,91 +214,129 @@ const validateHeaders = (headers: string[]) => {
   }
 };
 
-const parseRows = (rows: unknown[][], users: User[]) => {
+const parseRows = (rows: unknown[][], users: User[], currentData: CurrentData) => {
   const projectsByOt = new Map<string, ImportedProject>();
   const tasksById = new Map<string, ImportedTask>();
   const activities: ImportedActivity[] = [];
   const userLookup = buildUserLookup(users);
+  const rowErrors: string[] = [];
+
+  const existingTaskIds = new Set(currentData.tareas.map((t) => t.ID_Unico_Tarea));
+  const existingActivityKeys = new Set(currentData.actividades.map((a) => `${a.ID_Unico_Tarea}::${a.Title}`));
+  const seenTaskRows = new Set<string>();
+  const seenActivityKeys = new Set<string>();
+
+  let validRows = 0;
+  let duplicateRows = 0;
+  let newRows = 0;
 
   rows.forEach((row, idx) => {
     const rowNumber = idx + 2;
-    const projectTitle = toText(row[0]);
-    const projectOT = toText(row[1]);
-    const projectEstado = toStatusField(row[4], 'Proyecto_Estado', rowNumber);
 
-    const taskId = toText(row[5]);
-    const taskTitle = toText(row[6]);
-    const taskEstado = toStatusField(row[10], 'Tarea_Estado', rowNumber);
+    try {
+      const projectTitle = toText(row[0]);
+      const projectOT = toText(row[1]);
+      const projectEstado = toStatusField(row[4], 'Proyecto_Estado', rowNumber);
 
-    if (!projectTitle || !projectOT) {
-      throw new Error(`Fila ${rowNumber}: Proyecto_Title y Proyecto_OT son obligatorios.`);
-    }
-    if (!taskId || !taskTitle) {
-      throw new Error(`Fila ${rowNumber}: Tarea_ID_Unico_Tarea y Tarea_Title son obligatorios.`);
-    }
+      const taskId = toText(row[5]);
+      const taskTitle = toText(row[6]);
+      const taskEstado = toStatusField(row[10], 'Tarea_Estado', rowNumber);
 
-    const project: ImportedProject = {
-      Title: projectTitle,
-      OT: projectOT,
-      ID_LineaNegocio: toLineaNegocioIdField(row[2], rowNumber),
-      ID_GerenteProyecto: resolveUserIdField(row[3], 'Proyecto_ID_GerenteProyecto', rowNumber, 'gerente_proyecto', userLookup),
-      Estado: projectEstado
-    };
+      if (!projectTitle || !projectOT) {
+        throw new Error(`Fila ${rowNumber}: Proyecto_Title y Proyecto_OT son obligatorios.`);
+      }
+      if (!taskId || !taskTitle) {
+        throw new Error(`Fila ${rowNumber}: Tarea_ID_Unico_Tarea y Tarea_Title son obligatorios.`);
+      }
 
-    const task: ImportedTask = {
-      Title: taskTitle,
-      OT: projectOT,
-      ID_Disciplina: toDisciplinaIdField(row[7], rowNumber),
-      GerenteTarea: resolveUserIdField(row[8], 'Tarea_GerenteTarea', rowNumber, 'gerente_tarea', userLookup),
-      ID_Ejecutor: resolveUserIdField(row[9], 'Tarea_ID_Ejecutor', rowNumber, 'ejecutor', userLookup),
-      Estado: taskEstado,
-      FPlaneadaInicioOrig: toText(row[11]),
-      FPlaneadaFinOrig: toText(row[12]),
-      FPlaneadaInicioAct: toText(row[13]),
-      FPlaneadaFinAct: toText(row[14]),
-      FEsperadaIni: dateOrUndefined(row[15]),
-      FEsperadaFin: dateOrUndefined(row[16]),
-      FRealInicio: dateOrUndefined(row[17]),
-      FRealFin: dateOrUndefined(row[18]),
-      RazonRetraso: dateOrUndefined(row[19]),
-      ID_Unico_Tarea: taskId
-    };
+      const project: ImportedProject = {
+        Title: projectTitle,
+        OT: projectOT,
+        ID_LineaNegocio: toLineaNegocioIdField(row[2], rowNumber),
+        ID_GerenteProyecto: resolveUserIdField(row[3], 'Proyecto_ID_GerenteProyecto', rowNumber, 'gerente_proyecto', userLookup),
+        Estado: projectEstado
+      };
 
-    if (!task.FPlaneadaInicioOrig || !task.FPlaneadaFinOrig || !task.FPlaneadaInicioAct || !task.FPlaneadaFinAct) {
-      throw new Error(`Fila ${rowNumber}: las fechas planeadas de la tarea son obligatorias.`);
-    }
+      const task: ImportedTask = {
+        Title: taskTitle,
+        OT: projectOT,
+        ID_Disciplina: toDisciplinaIdField(row[7], rowNumber),
+        GerenteTarea: resolveUserIdField(row[8], 'Tarea_GerenteTarea', rowNumber, 'gerente_tarea', userLookup),
+        ID_Ejecutor: resolveUserIdField(row[9], 'Tarea_ID_Ejecutor', rowNumber, 'ejecutor', userLookup),
+        Estado: taskEstado,
+        FPlaneadaInicioOrig: toText(row[11]),
+        FPlaneadaFinOrig: toText(row[12]),
+        FPlaneadaInicioAct: toText(row[13]),
+        FPlaneadaFinAct: toText(row[14]),
+        FEsperadaIni: dateOrUndefined(row[15]),
+        FEsperadaFin: dateOrUndefined(row[16]),
+        FRealInicio: dateOrUndefined(row[17]),
+        FRealFin: dateOrUndefined(row[18]),
+        RazonRetraso: dateOrUndefined(row[19]),
+        ID_Unico_Tarea: taskId
+      };
 
-    const existingProject = projectsByOt.get(projectOT);
-    if (existingProject && JSON.stringify(existingProject) !== JSON.stringify(project)) {
-      throw new Error(`Fila ${rowNumber}: Proyecto_OT ${projectOT} tiene datos inconsistentes en filas distintas.`);
-    }
-    projectsByOt.set(projectOT, project);
+      if (!task.FPlaneadaInicioOrig || !task.FPlaneadaFinOrig || !task.FPlaneadaInicioAct || !task.FPlaneadaFinAct) {
+        throw new Error(`Fila ${rowNumber}: las fechas planeadas de la tarea son obligatorias.`);
+      }
 
-    const existingTask = tasksById.get(taskId);
-    if (existingTask && JSON.stringify(existingTask) !== JSON.stringify(task)) {
-      throw new Error(`Fila ${rowNumber}: Tarea_ID_Unico_Tarea ${taskId} tiene datos inconsistentes en filas distintas.`);
-    }
-    tasksById.set(taskId, task);
+      const existingProject = projectsByOt.get(projectOT);
+      if (existingProject && JSON.stringify(existingProject) !== JSON.stringify(project)) {
+        throw new Error(`Fila ${rowNumber}: Proyecto_OT ${projectOT} tiene datos inconsistentes en filas distintas.`);
+      }
+      projectsByOt.set(projectOT, project);
 
-    const activityTitle = toText(row[20]);
-    if (activityTitle) {
-      activities.push({
-        ID_Unico_Tarea: taskId,
-        Title: activityTitle,
-        IsStarted: toBooleanField(row[21], 'Actividad_IsStarted', rowNumber),
-        IsCompleted: toBooleanField(row[22], 'Actividad_IsCompleted', rowNumber),
-        FechaInicio: dateOrUndefined(row[23]),
-        FechaFinalizacion: dateOrUndefined(row[24]),
-        ID_Tarea_Legacy: dateOrUndefined(row[25]),
-        razon_no_cumplimiento: dateOrUndefined(row[26])
-      });
+      const existingTask = tasksById.get(taskId);
+      if (existingTask && JSON.stringify(existingTask) !== JSON.stringify(task)) {
+        throw new Error(`Fila ${rowNumber}: Tarea_ID_Unico_Tarea ${taskId} tiene datos inconsistentes en filas distintas.`);
+      }
+      tasksById.set(taskId, task);
+
+      const activityTitle = toText(row[20]);
+      let lineIsDuplicate = false;
+
+      if (activityTitle) {
+        const activityKey = `${taskId}::${activityTitle}`;
+        lineIsDuplicate = existingActivityKeys.has(activityKey) || seenActivityKeys.has(activityKey);
+        seenActivityKeys.add(activityKey);
+
+        activities.push({
+          ID_Unico_Tarea: taskId,
+          Title: activityTitle,
+          IsStarted: toBooleanField(row[21], 'Actividad_IsStarted', rowNumber),
+          IsCompleted: toBooleanField(row[22], 'Actividad_IsCompleted', rowNumber),
+          FechaInicio: dateOrUndefined(row[23]),
+          FechaFinalizacion: dateOrUndefined(row[24]),
+          ID_Tarea_Legacy: dateOrUndefined(row[25]),
+          razon_no_cumplimiento: dateOrUndefined(row[26])
+        });
+      } else {
+        lineIsDuplicate = existingTaskIds.has(taskId) || seenTaskRows.has(taskId);
+        seenTaskRows.add(taskId);
+      }
+
+      validRows += 1;
+      if (lineIsDuplicate) {
+        duplicateRows += 1;
+      } else {
+        newRows += 1;
+      }
+    } catch (error) {
+      rowErrors.push(error instanceof Error ? error.message : `Fila ${rowNumber}: error desconocido.`);
     }
   });
 
   return {
     projects: Array.from(projectsByOt.values()),
     tasks: Array.from(tasksById.values()),
-    activities
+    activities,
+    summary: {
+      totalRows: rows.length,
+      validRows,
+      duplicateRows,
+      newRows,
+      rowErrors
+    }
   };
 };
 
@@ -308,27 +347,28 @@ const importData = async (
   currentData?: Awaited<ReturnType<typeof dataRepository.getAllData>>
 ) => {
   const current = currentData ?? await dataRepository.getAllData();
+  let newProjects = 0;
+  let newTasks = 0;
+  let newActivities = 0;
 
   const projectsByOT = new Map(current.proyectos.map((p) => [p.OT, p]));
   for (const project of projects) {
     const existing = projectsByOT.get(project.OT);
-    if (existing) {
-      await dataRepository.updateProject(existing.id, project);
-    } else {
-      const created = await dataRepository.createProject(project);
-      projectsByOT.set(created.OT, created);
-    }
+    if (existing) continue;
+
+    const created = await dataRepository.createProject(project);
+    projectsByOT.set(created.OT, created);
+    newProjects += 1;
   }
 
   const tasksByUniqueId = new Map(current.tareas.map((t) => [t.ID_Unico_Tarea, t]));
   for (const task of tasks) {
     const existing = tasksByUniqueId.get(task.ID_Unico_Tarea);
-    if (existing) {
-      await dataRepository.updateTask(existing.id, task);
-    } else {
-      const created = await dataRepository.createTask(task);
-      tasksByUniqueId.set(created.ID_Unico_Tarea, created);
-    }
+    if (existing) continue;
+
+    const created = await dataRepository.createTask(task);
+    tasksByUniqueId.set(created.ID_Unico_Tarea, created);
+    newTasks += 1;
   }
 
   const existingActivityKeys = new Set(current.actividades.map((a) => `${a.ID_Unico_Tarea}::${a.Title}`));
@@ -352,7 +392,10 @@ const importData = async (
 
     await dataRepository.updateActivity(created.id, updates);
     existingActivityKeys.add(key);
+    newActivities += 1;
   }
+
+  return { newProjects, newTasks, newActivities };
 };
 
 const downloadTemplate = () => {
@@ -432,10 +475,28 @@ export const ImportView: React.FC<ImportViewProps> = ({ onImportSuccess }) => {
       }
 
       const current = await dataRepository.getAllData();
-      const { projects, tasks, activities } = parseRows(dataRows, current.users);
-      await importData(projects, tasks, activities, current);
+      const { projects, tasks, activities, summary } = parseRows(dataRows, current.users, current);
+      const importResult = await importData(projects, tasks, activities, current);
 
-      setSuccessMessage(`Importacion completada: ${projects.length} proyecto(s), ${tasks.length} tarea(s) y ${activities.length} actividad(es).`);
+      const successParts = [
+        `Importacion finalizada. Lineas validas: ${summary.validRows} de ${summary.totalRows}.`,
+        `Lineas nuevas: ${summary.newRows}.`,
+        `Nuevos registros creados: ${importResult.newProjects} proyecto(s), ${importResult.newTasks} tarea(s) y ${importResult.newActivities} actividad(es).`
+      ];
+      if (summary.duplicateRows > 0) {
+        successParts.push(`Lineas duplicadas detectadas y omitidas: ${summary.duplicateRows}.`);
+      }
+      setSuccessMessage(successParts.join(' '));
+
+      if (summary.rowErrors.length > 0) {
+        const visibleErrors = summary.rowErrors.slice(0, 8);
+        const hiddenCount = summary.rowErrors.length - visibleErrors.length;
+        const hiddenText = hiddenCount > 0 ? `\n... y ${hiddenCount} error(es) adicional(es).` : '';
+        setErrorMessage(`Se encontraron ${summary.rowErrors.length} fila(s) con errores y no se importaron:\n- ${visibleErrors.join('\n- ')}${hiddenText}`);
+      } else {
+        setErrorMessage(null);
+      }
+
       if (onImportSuccess) {
         await onImportSuccess();
       }
@@ -466,15 +527,33 @@ export const ImportView: React.FC<ImportViewProps> = ({ onImportSuccess }) => {
       </p>
 
       {errorMessage && (
-        <p className="text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-          {errorMessage}
-        </p>
+        <div className="text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 whitespace-pre-line text-left space-y-3">
+          <p>{errorMessage}</p>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setErrorMessage(null)}
+              className="bg-red-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-red-700 active:scale-95 transition"
+            >
+              OK
+            </button>
+          </div>
+        </div>
       )}
 
       {successMessage && (
-        <p className="text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
-          {successMessage}
-        </p>
+        <div className="text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 space-y-3">
+          <p>{successMessage}</p>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setSuccessMessage(null)}
+              className="bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700 active:scale-95 transition"
+            >
+              OK
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="pt-6 flex justify-center gap-3">

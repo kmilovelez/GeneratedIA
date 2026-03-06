@@ -29,8 +29,10 @@ export default function App() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const canManageUsers = currentUser?.rol === 'administrador' || currentUser?.rol === 'gerente_proyecto';
 
-  const reloadData = async () => {
-    setIsLoadingData(true);
+  const reloadData = async (showLoader = true) => {
+    if (showLoader) {
+      setIsLoadingData(true);
+    }
     setDataError(null);
     try {
       const data = await dataRepository.getAllData();
@@ -47,7 +49,9 @@ export default function App() {
     } catch (error) {
       setDataError(error instanceof Error ? error.message : 'No fue posible cargar los datos.');
     } finally {
-      setIsLoadingData(false);
+      if (showLoader) {
+        setIsLoadingData(false);
+      }
     }
   };
 
@@ -230,7 +234,7 @@ export default function App() {
             actividades={actividades} 
           />
         )}
-        {activeTab === 'import' && <ImportView onImportSuccess={() => reloadData()} />}
+        {activeTab === 'import' && <ImportView onImportSuccess={() => reloadData(false)} />}
         {activeTab === 'admin' && canManageUsers && (
           <AdminView
             users={users}
