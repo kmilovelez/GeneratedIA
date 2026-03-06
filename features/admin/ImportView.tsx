@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Download, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { dataRepository } from '../../lib/dataRepository';
-import { Actividad, ProjectStatus, Proyecto, Tarea } from '../../types';
+import { Actividad, ProjectStatus, Proyecto, Role, Tarea, User } from '../../types';
 
 type ImportViewProps = {
   onImportSuccess?: () => Promise<void> | void;
@@ -45,6 +45,15 @@ const EXPECTED_HEADERS = [
 const VALID_STATUSES = new Set<ProjectStatus>(['DECK', 'WIP', 'FROZEN', 'FINALIZADA']);
 
 const toText = (value: unknown) => String(value ?? '').trim();
+const normalizeCatalogValue = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+const isNumericText = (value: string) => /^-?\d+(\.\d+)?$/.test(value);
+const normalizeUserKey = (value: string) => normalizeCatalogValue(value).replace(/[.\-_]/g, '').replace(/\s+/g, '');
 
 const toNumberField = (value: unknown, field: string, rowNumber: number): number => {
   const raw = toText(value);
@@ -53,6 +62,115 @@ const toNumberField = (value: unknown, field: string, rowNumber: number): number
     throw new Error(`Fila ${rowNumber}: el campo ${field} debe ser numerico.`);
   }
   return parsed;
+};
+
+const toTextCatalogField = (value: unknown, field: string, rowNumber: number): string => {
+  const raw = toText(value);
+  if (!raw) {
+    throw new Error(`Fila ${rowNumber}: el campo ${field} es obligatorio y debe estar en texto.`);
+  }
+  if (isNumericText(raw)) {
+    throw new Error(`Fila ${rowNumber}: el campo ${field} debe estar en texto, no en numero.`);
+  }
+  return normalizeCatalogValue(raw);
+};
+
+const toTextUserField = (value: unknown, field: string, rowNumber: number): string => {
+  const raw = toText(value);
+  if (!raw) {
+    throw new Error(`Fila ${rowNumber}: el campo ${field} es obligatorio y debe estar en texto.`);
+  }
+  if (isNumericText(raw)) {
+    throw new Error(`Fila ${rowNumber}: el campo ${field} debe estar en texto, no en numero.`);
+  }
+  return raw;
+};
+
+type UserLookup = {
+  global: Map<string, number[]>;
+  byRole: Map<Role, Map<string, number[]>>;
+};
+
+const addLookupEntry = (map: Map<string, number[]>, key: string, userId: number) => {
+  if (!key) return;
+  const current = map.get(key) || [];
+  if (!current.includes(userId)) current.push(userId);
+  map.set(key, current);
+};
+
+const buildUserLookup = (users: User[]): UserLookup => {
+  const global = new Map<string, number[]>();
+  const byRole = new Map<Role, Map<string, number[]>>([
+    ['administrador', new Map()],
+    ['gerente_proyecto', new Map()],
+    ['gerente_tarea', new Map()],
+    ['lider_integracion', new Map()],
+    ['ejecutor', new Map()]
+  ]);
+
+  users.forEach((user) => {
+    const roleMap = byRole.get(user.rol)!;
+    const emailAlias = user.email.includes('@') ? user.email.split('@')[0] : user.email;
+    const keys = [normalizeUserKey(user.nombre), normalizeUserKey(user.email), normalizeUserKey(emailAlias)];
+    keys.forEach((key) => {
+      addLookupEntry(global, key, user.id);
+      addLookupEntry(roleMap, key, user.id);
+    });
+  });
+
+  return { global, byRole };
+};
+
+const resolveUserIdField = (
+  value: unknown,
+  field: string,
+  rowNumber: number,
+  expectedRole: Role,
+  lookup: UserLookup
+): number => {
+  const raw = toTextUserField(value, field, rowNumber);
+  const key = normalizeUserKey(raw);
+  const roleMap = lookup.byRole.get(expectedRole)!;
+  const roleMatches = roleMap.get(key) || [];
+  const globalMatches = lookup.global.get(key) || [];
+  const matches = roleMatches.length > 0 ? roleMatches : globalMatches;
+  const uniqueMatches = Array.from(new Set(matches));
+
+  if (uniqueMatches.length === 0) {
+    throw new Error(`Fila ${rowNumber}: no se encontro usuario para ${field} con valor "${raw}".`);
+  }
+  if (uniqueMatches.length > 1) {
+    throw new Error(`Fila ${rowNumber}: el valor "${raw}" en ${field} coincide con varios usuarios.`);
+  }
+
+  return uniqueMatches[0];
+};
+
+const toLineaNegocioIdField = (value: unknown, rowNumber: number): number => {
+  const normalized = toTextCatalogField(value, 'Proyecto_ID_LineaNegocio', rowNumber);
+  if (normalized === 'AEROPUERTOS' || normalized === 'AEROPUERTO') return 1;
+  if (normalized === 'LOGISTICA' || normalized === 'LOGISTICO' || normalized === 'LOGISTICA Y CONTROL') return 2;
+  if (normalized === 'CARTON' || normalized === 'CARTONES') return 3;
+  throw new Error(`Fila ${rowNumber}: Proyecto_ID_LineaNegocio invalido. Use: Aeropuertos, Logistica o Carton.`);
+};
+
+const toDisciplinaIdField = (value: unknown, rowNumber: number): number => {
+  const normalized = toTextCatalogField(value, 'Tarea_ID_Disciplina', rowNumber);
+  if (normalized === 'SOFTWARE' || normalized === 'INGENIERIA DE SOFTWARE') return 1;
+  if (
+    normalized === 'CONTROL' ||
+    normalized === 'INGENIERIA DE CONTROL' ||
+    normalized === 'ING CONTROL' ||
+    normalized === 'AYC' ||
+    normalized === 'AUTOMATIZACION Y CONTROL'
+  ) return 2;
+  if (
+    normalized === 'MECANICA' ||
+    normalized === 'INGENIERIA MECANICA' ||
+    normalized === 'INGENIERIA DE MECANICA' ||
+    normalized === 'ING MECANICA'
+  ) return 3;
+  throw new Error(`Fila ${rowNumber}: Tarea_ID_Disciplina invalido. Use: Software, Control o Mecanica.`);
 };
 
 const toStatusField = (value: unknown, field: string, rowNumber: number): ProjectStatus => {
@@ -95,10 +213,11 @@ const validateHeaders = (headers: string[]) => {
   }
 };
 
-const parseRows = (rows: unknown[][]) => {
+const parseRows = (rows: unknown[][], users: User[]) => {
   const projectsByOt = new Map<string, ImportedProject>();
   const tasksById = new Map<string, ImportedTask>();
   const activities: ImportedActivity[] = [];
+  const userLookup = buildUserLookup(users);
 
   rows.forEach((row, idx) => {
     const rowNumber = idx + 2;
@@ -120,17 +239,17 @@ const parseRows = (rows: unknown[][]) => {
     const project: ImportedProject = {
       Title: projectTitle,
       OT: projectOT,
-      ID_LineaNegocio: toNumberField(row[2], 'Proyecto_ID_LineaNegocio', rowNumber),
-      ID_GerenteProyecto: toNumberField(row[3], 'Proyecto_ID_GerenteProyecto', rowNumber),
+      ID_LineaNegocio: toLineaNegocioIdField(row[2], rowNumber),
+      ID_GerenteProyecto: resolveUserIdField(row[3], 'Proyecto_ID_GerenteProyecto', rowNumber, 'gerente_proyecto', userLookup),
       Estado: projectEstado
     };
 
     const task: ImportedTask = {
       Title: taskTitle,
       OT: projectOT,
-      ID_Disciplina: toNumberField(row[7], 'Tarea_ID_Disciplina', rowNumber),
-      GerenteTarea: toNumberField(row[8], 'Tarea_GerenteTarea', rowNumber),
-      ID_Ejecutor: toNumberField(row[9], 'Tarea_ID_Ejecutor', rowNumber),
+      ID_Disciplina: toDisciplinaIdField(row[7], rowNumber),
+      GerenteTarea: resolveUserIdField(row[8], 'Tarea_GerenteTarea', rowNumber, 'gerente_tarea', userLookup),
+      ID_Ejecutor: resolveUserIdField(row[9], 'Tarea_ID_Ejecutor', rowNumber, 'ejecutor', userLookup),
       Estado: taskEstado,
       FPlaneadaInicioOrig: toText(row[11]),
       FPlaneadaFinOrig: toText(row[12]),
@@ -182,8 +301,13 @@ const parseRows = (rows: unknown[][]) => {
   };
 };
 
-const importData = async (projects: ImportedProject[], tasks: ImportedTask[], activities: ImportedActivity[]) => {
-  const current = await dataRepository.getAllData();
+const importData = async (
+  projects: ImportedProject[],
+  tasks: ImportedTask[],
+  activities: ImportedActivity[],
+  currentData?: Awaited<ReturnType<typeof dataRepository.getAllData>>
+) => {
+  const current = currentData ?? await dataRepository.getAllData();
 
   const projectsByOT = new Map(current.proyectos.map((p) => [p.OT, p]));
   for (const project of projects) {
@@ -236,14 +360,14 @@ const downloadTemplate = () => {
   const unifiedSample = [[
     'Modernizacion Planta Norte',
     'OT-2026-001',
-    1,
-    2,
+    'Aeropuertos',
+    'Juan Proyecto',
     'DECK',
     'OT-2026-001-T1',
     'Ingenieria de detalle',
-    1,
-    3,
-    4,
+    'Control',
+    'Ana Tarea',
+    'Pedro Ejecutor',
     'WIP',
     '2026-03-01',
     '2026-03-15',
@@ -307,8 +431,9 @@ export const ImportView: React.FC<ImportViewProps> = ({ onImportSuccess }) => {
         throw new Error('La hoja "datos" esta vacia.');
       }
 
-      const { projects, tasks, activities } = parseRows(dataRows);
-      await importData(projects, tasks, activities);
+      const current = await dataRepository.getAllData();
+      const { projects, tasks, activities } = parseRows(dataRows, current.users);
+      await importData(projects, tasks, activities, current);
 
       setSuccessMessage(`Importacion completada: ${projects.length} proyecto(s), ${tasks.length} tarea(s) y ${activities.length} actividad(es).`);
       if (onImportSuccess) {
