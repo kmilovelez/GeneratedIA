@@ -16,13 +16,6 @@ interface ProjectListProps {
 export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAddProject, onUpdateProject, onDeleteProject }) => {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
-  const [filters, setFilters] = useState({
-    title: '',
-    ot: '',
-    lineaNegocio: 'all',
-    gerente: 'all',
-    estado: 'all'
-  });
   
   const initialFormState = {
     Title: '',
@@ -39,23 +32,96 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
     [users]
   );
 
+  const availableTitles = useMemo(
+    () => Array.from(new Set(proyectos.map((p) => p.Title))).sort((a, b) => a.localeCompare(b)),
+    [proyectos]
+  );
+  const availableOTs = useMemo(
+    () => Array.from(new Set(proyectos.map((p) => p.OT))).sort((a, b) => a.localeCompare(b)),
+    [proyectos]
+  );
+  const availableLineaIds = useMemo(
+    () => Array.from(new Set(proyectos.map((p) => p.ID_LineaNegocio))).sort((a, b) => a - b),
+    [proyectos]
+  );
+  const availableGerenteIds = useMemo(
+    () => Array.from(new Set(proyectos.map((p) => p.ID_GerenteProyecto))).sort((a, b) => a - b),
+    [proyectos]
+  );
+  const availableEstados = useMemo(
+    () => Array.from(new Set(proyectos.map((p) => p.Estado))),
+    [proyectos]
+  );
+
+  const [selectedTitles, setSelectedTitles] = useState<string[]>([]);
+  const [selectedOTs, setSelectedOTs] = useState<string[]>([]);
+  const [selectedLineas, setSelectedLineas] = useState<number[]>([]);
+  const [selectedGerentes, setSelectedGerentes] = useState<number[]>([]);
+  const [selectedEstados, setSelectedEstados] = useState<ProjectStatus[]>([]);
+
+  React.useEffect(() => {
+    setSelectedTitles(availableTitles);
+  }, [availableTitles]);
+
+  React.useEffect(() => {
+    setSelectedOTs(availableOTs);
+  }, [availableOTs]);
+
+  React.useEffect(() => {
+    setSelectedLineas(availableLineaIds);
+  }, [availableLineaIds]);
+
+  React.useEffect(() => {
+    setSelectedGerentes(availableGerenteIds);
+  }, [availableGerenteIds]);
+
+  React.useEffect(() => {
+    setSelectedEstados(availableEstados);
+  }, [availableEstados]);
+
+  const toggleStringFilter = (
+    value: string,
+    selected: string[],
+    setSelected: React.Dispatch<React.SetStateAction<string[]>>
+  ) => {
+    if (selected.includes(value)) {
+      setSelected(selected.filter((item) => item !== value));
+      return;
+    }
+    setSelected([...selected, value]);
+  };
+
+  const toggleNumberFilter = (
+    value: number,
+    selected: number[],
+    setSelected: React.Dispatch<React.SetStateAction<number[]>>
+  ) => {
+    if (selected.includes(value)) {
+      setSelected(selected.filter((item) => item !== value));
+      return;
+    }
+    setSelected([...selected, value]);
+  };
+
+  const toggleEstadoFilter = (value: ProjectStatus) => {
+    if (selectedEstados.includes(value)) {
+      setSelectedEstados(selectedEstados.filter((item) => item !== value));
+      return;
+    }
+    setSelectedEstados([...selectedEstados, value]);
+  };
+
   const filteredProjects = useMemo(() => {
-    const titleFilter = filters.title.trim().toLowerCase();
-    const otFilter = filters.ot.trim().toLowerCase();
-
     return proyectos.filter((project) => {
-      const manager = users.find((u) => u.id === project.ID_GerenteProyecto);
+      const byTitle = selectedTitles.includes(project.Title);
+      const byOt = selectedOTs.includes(project.OT);
+      const byLinea = selectedLineas.includes(project.ID_LineaNegocio);
+      const byGerente = selectedGerentes.includes(project.ID_GerenteProyecto);
+      const byEstado = selectedEstados.includes(project.Estado);
 
-      const byTitle = !titleFilter || project.Title.toLowerCase().includes(titleFilter);
-      const byOt = !otFilter || project.OT.toLowerCase().includes(otFilter);
-      const byLinea = filters.lineaNegocio === 'all' || String(project.ID_LineaNegocio) === filters.lineaNegocio;
-      const byGerente = filters.gerente === 'all' || String(project.ID_GerenteProyecto) === filters.gerente;
-      const byEstado = filters.estado === 'all' || project.Estado === filters.estado;
-      const managerExists = !!manager || filters.gerente === 'all';
-
-      return byTitle && byOt && byLinea && byGerente && byEstado && managerExists;
+      return byTitle && byOt && byLinea && byGerente && byEstado;
     });
-  }, [proyectos, users, filters]);
+  }, [proyectos, selectedTitles, selectedOTs, selectedLineas, selectedGerentes, selectedEstados]);
 
   const handleOpenCreate = () => {
     setProjectForm(initialFormState);
@@ -232,51 +298,135 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
         <div className="px-8 py-6 border-b border-slate-100 bg-slate-50/40">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
-            <input
-              type="text"
-              placeholder="Filtrar Proyecto"
-              value={filters.title}
-              onChange={(e) => setFilters((prev) => ({ ...prev, title: e.target.value }))}
-              className="w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-100"
-            />
-            <input
-              type="text"
-              placeholder="Filtrar OT"
-              value={filters.ot}
-              onChange={(e) => setFilters((prev) => ({ ...prev, ot: e.target.value }))}
-              className="w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-100"
-            />
-            <select
-              value={filters.lineaNegocio}
-              onChange={(e) => setFilters((prev) => ({ ...prev, lineaNegocio: e.target.value }))}
-              className="w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer"
-            >
-              <option value="all">Todas las lineas</option>
-              {INITIAL_LINEAS.map((linea) => (
-                <option key={linea.id} value={String(linea.id)}>{linea.nombre}</option>
-              ))}
-            </select>
-            <select
-              value={filters.gerente}
-              onChange={(e) => setFilters((prev) => ({ ...prev, gerente: e.target.value }))}
-              className="w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer"
-            >
-              <option value="all">Todos los gerentes</option>
-              {managers.map((manager) => (
-                <option key={manager.id} value={String(manager.id)}>{manager.nombre}</option>
-              ))}
-            </select>
-            <select
-              value={filters.estado}
-              onChange={(e) => setFilters((prev) => ({ ...prev, estado: e.target.value }))}
-              className="w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer"
-            >
-              <option value="all">Todos los estados</option>
-              <option value="DECK">DECK</option>
-              <option value="WIP">WIP</option>
-              <option value="FROZEN">FROZEN</option>
-              <option value="FINALIZADA">FINALIZADA</option>
-            </select>
+            <details className="relative">
+              <summary className="list-none cursor-pointer w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold">
+                Proyecto ({selectedTitles.length === availableTitles.length ? 'Todos' : selectedTitles.length})
+              </summary>
+              <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 max-h-64 overflow-y-auto">
+                <label className="flex items-center gap-2 text-xs font-black text-slate-700 cursor-pointer border-b border-slate-100 pb-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedTitles.length === availableTitles.length}
+                    onChange={(e) => setSelectedTitles(e.target.checked ? availableTitles : [])}
+                  />
+                  Seleccionar todos
+                </label>
+                {availableTitles.map((title) => (
+                  <label key={title} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedTitles.includes(title)}
+                      onChange={() => toggleStringFilter(title, selectedTitles, setSelectedTitles)}
+                    />
+                    {title}
+                  </label>
+                ))}
+              </div>
+            </details>
+
+            <details className="relative">
+              <summary className="list-none cursor-pointer w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold">
+                OT ({selectedOTs.length === availableOTs.length ? 'Todos' : selectedOTs.length})
+              </summary>
+              <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 max-h-64 overflow-y-auto">
+                <label className="flex items-center gap-2 text-xs font-black text-slate-700 cursor-pointer border-b border-slate-100 pb-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedOTs.length === availableOTs.length}
+                    onChange={(e) => setSelectedOTs(e.target.checked ? availableOTs : [])}
+                  />
+                  Seleccionar todos
+                </label>
+                {availableOTs.map((ot) => (
+                  <label key={ot} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedOTs.includes(ot)}
+                      onChange={() => toggleStringFilter(ot, selectedOTs, setSelectedOTs)}
+                    />
+                    {ot}
+                  </label>
+                ))}
+              </div>
+            </details>
+
+            <details className="relative">
+              <summary className="list-none cursor-pointer w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold">
+                Linea de Negocio ({selectedLineas.length === availableLineaIds.length ? 'Todas' : selectedLineas.length})
+              </summary>
+              <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 max-h-64 overflow-y-auto">
+                <label className="flex items-center gap-2 text-xs font-black text-slate-700 cursor-pointer border-b border-slate-100 pb-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedLineas.length === availableLineaIds.length}
+                    onChange={(e) => setSelectedLineas(e.target.checked ? availableLineaIds : [])}
+                  />
+                  Seleccionar todos
+                </label>
+                {availableLineaIds.map((lineaId) => (
+                  <label key={lineaId} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedLineas.includes(lineaId)}
+                      onChange={() => toggleNumberFilter(lineaId, selectedLineas, setSelectedLineas)}
+                    />
+                    {INITIAL_LINEAS.find((linea) => linea.id === lineaId)?.nombre || `Linea ${lineaId}`}
+                  </label>
+                ))}
+              </div>
+            </details>
+
+            <details className="relative">
+              <summary className="list-none cursor-pointer w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold">
+                Gerente ({selectedGerentes.length === availableGerenteIds.length ? 'Todos' : selectedGerentes.length})
+              </summary>
+              <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 max-h-64 overflow-y-auto">
+                <label className="flex items-center gap-2 text-xs font-black text-slate-700 cursor-pointer border-b border-slate-100 pb-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedGerentes.length === availableGerenteIds.length}
+                    onChange={(e) => setSelectedGerentes(e.target.checked ? availableGerenteIds : [])}
+                  />
+                  Seleccionar todos
+                </label>
+                {availableGerenteIds.map((gerenteId) => (
+                  <label key={gerenteId} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedGerentes.includes(gerenteId)}
+                      onChange={() => toggleNumberFilter(gerenteId, selectedGerentes, setSelectedGerentes)}
+                    />
+                    {users.find((user) => user.id === gerenteId)?.nombre || `Usuario ${gerenteId}`}
+                  </label>
+                ))}
+              </div>
+            </details>
+
+            <details className="relative">
+              <summary className="list-none cursor-pointer w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold">
+                Estado ({selectedEstados.length === availableEstados.length ? 'Todos' : selectedEstados.length})
+              </summary>
+              <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 max-h-64 overflow-y-auto">
+                <label className="flex items-center gap-2 text-xs font-black text-slate-700 cursor-pointer border-b border-slate-100 pb-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedEstados.length === availableEstados.length}
+                    onChange={(e) => setSelectedEstados(e.target.checked ? availableEstados : [])}
+                  />
+                  Seleccionar todos
+                </label>
+                {availableEstados.map((estado) => (
+                  <label key={estado} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedEstados.includes(estado)}
+                      onChange={() => toggleEstadoFilter(estado)}
+                    />
+                    {estado}
+                  </label>
+                ))}
+              </div>
+            </details>
           </div>
         </div>
 
@@ -360,7 +510,13 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
             <p className="text-sm font-bold uppercase tracking-widest text-slate-400">Sin resultados para los filtros actuales</p>
             <button
               type="button"
-              onClick={() => setFilters({ title: '', ot: '', lineaNegocio: 'all', gerente: 'all', estado: 'all' })}
+              onClick={() => {
+                setSelectedTitles(availableTitles);
+                setSelectedOTs(availableOTs);
+                setSelectedLineas(availableLineaIds);
+                setSelectedGerentes(availableGerenteIds);
+                setSelectedEstados(availableEstados);
+              }}
               className="text-xs font-black uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-100 px-4 py-2 rounded-xl hover:bg-blue-100 transition"
             >
               Limpiar filtros
