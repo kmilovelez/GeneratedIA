@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Plus, CheckSquare, Send, CheckCircle2, Calendar, Layers, PauseCircle, PlayCircle, Filter, Users, X, Briefcase, Hash, UserCheck } from 'lucide-react';
 import { Tarea, Actividad, Proyecto, User, ProjectStatus } from '../../types/index';
 import { INITIAL_DISCIPLINAS, INITIAL_LINEAS, getStatusColor, getStatusIcon, formatDate } from '../../lib/utils';
@@ -23,10 +23,10 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
   const [newActivityInput, setNewActivityInput] = useState<{ [key: string]: string }>({});
   const [isAddingTask, setIsAddingTask] = useState(false);
   
-  const [filterDisciplinas, setFilterDisciplinas] = useState<number[]>([]);
-  const [filterGerentes, setFilterGerentes] = useState<number[]>([]);
-  const [filterEstados, setFilterEstados] = useState<ProjectStatus[]>([]);
-  const [filterLineasNegocio, setFilterLineasNegocio] = useState<number[]>([]);
+  const [filterDisciplinas, setFilterDisciplinas] = useState<number[]>(() => INITIAL_DISCIPLINAS.map((d) => d.id));
+  const [filterGerentes, setFilterGerentes] = useState<number[]>(() => users.filter((u) => u.rol === 'gerente_tarea').map((u) => u.id));
+  const [filterEstados, setFilterEstados] = useState<ProjectStatus[]>(['DECK', 'WIP', 'FROZEN', 'FINALIZADA']);
+  const [filterLineasNegocio, setFilterLineasNegocio] = useState<number[]>(() => INITIAL_LINEAS.map((l) => l.id));
 
   const [newTaskForm, setNewTaskForm] = useState({
     Title: '',
@@ -56,54 +56,34 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
   const allEstadoValues: ProjectStatus[] = ['DECK', 'WIP', 'FROZEN', 'FINALIZADA'];
   const allLineaIds = useMemo(() => INITIAL_LINEAS.map((l) => l.id), []);
 
-  const toggleNumberFilter = (
-    value: number,
-    selected: number[],
-    allValues: number[],
-    setSelected: React.Dispatch<React.SetStateAction<number[]>>
-  ) => {
-    if (selected.length === 0) {
-      const next = allValues.filter((item) => item !== value);
-      setSelected(next.length === allValues.length ? [] : next);
-      return;
-    }
+  useEffect(() => {
+    setFilterGerentes((prev) => prev.filter((id) => allGerenteIds.includes(id)));
+  }, [allGerenteIds]);
 
+  const toggleNumberFilter = (value: number, selected: number[], setSelected: React.Dispatch<React.SetStateAction<number[]>>) => {
     if (selected.includes(value)) {
-      const next = selected.filter((item) => item !== value);
-      setSelected(next.length === 0 ? [] : next);
+      setSelected(selected.filter((item) => item !== value));
       return;
     }
-
-    const next = [...selected, value];
-    setSelected(next.length === allValues.length ? [] : next);
+    setSelected([...selected, value]);
   };
 
   const toggleStatusFilter = (value: ProjectStatus) => {
-    if (filterEstados.length === 0) {
-      const next = allEstadoValues.filter((item) => item !== value);
-      setFilterEstados(next.length === allEstadoValues.length ? [] : next);
-      return;
-    }
-
     if (filterEstados.includes(value)) {
-      const next = filterEstados.filter((item) => item !== value);
-      setFilterEstados(next.length === 0 ? [] : next);
+      setFilterEstados(filterEstados.filter((item) => item !== value));
       return;
     }
-
-    const next = [...filterEstados, value];
-    setFilterEstados(next.length === allEstadoValues.length ? [] : next);
+    setFilterEstados([...filterEstados, value]);
   };
 
   const tareasFiltradas = useMemo(() => {
     return tareas.filter(t => {
       const project = proyectosByOt.get(t.OT);
-      const matchDisciplina = filterDisciplinas.length === 0 || filterDisciplinas.includes(t.ID_Disciplina);
-      const matchGerente = filterGerentes.length === 0 || filterGerentes.includes(t.GerenteTarea);
-      const matchEstado = filterEstados.length === 0 || filterEstados.includes(t.Estado);
+      const matchDisciplina = filterDisciplinas.includes(t.ID_Disciplina);
+      const matchGerente = filterGerentes.includes(t.GerenteTarea);
+      const matchEstado = filterEstados.includes(t.Estado);
       const matchLineaNegocio =
-        filterLineasNegocio.length === 0 ||
-        (project ? filterLineasNegocio.includes(project.ID_LineaNegocio) : false);
+        project ? filterLineasNegocio.includes(project.ID_LineaNegocio) : false;
       return matchDisciplina && matchGerente && matchEstado && matchLineaNegocio;
     });
   }, [tareas, proyectosByOt, filterDisciplinas, filterGerentes, filterEstados, filterLineasNegocio]);
@@ -150,15 +130,23 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
         </div>
         <details className="relative flex-1 min-w-[220px]">
           <summary className="list-none cursor-pointer w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 outline-none">
-            Disciplina ({filterDisciplinas.length === 0 ? 'Todas' : filterDisciplinas.length})
+            Disciplina ({filterDisciplinas.length === allDisciplinaIds.length ? 'Todas' : filterDisciplinas.length})
           </summary>
           <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 max-h-64 overflow-y-auto">
+            <label className="flex items-center gap-2 text-xs font-black text-slate-700 cursor-pointer border-b border-slate-100 pb-2">
+              <input
+                type="checkbox"
+                checked={filterDisciplinas.length === allDisciplinaIds.length}
+                onChange={(e) => setFilterDisciplinas(e.target.checked ? allDisciplinaIds : [])}
+              />
+              Seleccionar todos
+            </label>
             {INITIAL_DISCIPLINAS.map(d => (
               <label key={d.id} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={filterDisciplinas.length === 0 || filterDisciplinas.includes(d.id)}
-                  onChange={() => toggleNumberFilter(d.id, filterDisciplinas, allDisciplinaIds, setFilterDisciplinas)}
+                  checked={filterDisciplinas.includes(d.id)}
+                  onChange={() => toggleNumberFilter(d.id, filterDisciplinas, setFilterDisciplinas)}
                 />
                 {d.nombre}
               </label>
@@ -168,15 +156,23 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
 
         <details className="relative flex-1 min-w-[220px]">
           <summary className="list-none cursor-pointer w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 outline-none">
-            Gerente ({filterGerentes.length === 0 ? 'Todos' : filterGerentes.length})
+            Gerente ({filterGerentes.length === allGerenteIds.length ? 'Todos' : filterGerentes.length})
           </summary>
           <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 max-h-64 overflow-y-auto">
+            <label className="flex items-center gap-2 text-xs font-black text-slate-700 cursor-pointer border-b border-slate-100 pb-2">
+              <input
+                type="checkbox"
+                checked={filterGerentes.length === allGerenteIds.length}
+                onChange={(e) => setFilterGerentes(e.target.checked ? allGerenteIds : [])}
+              />
+              Seleccionar todos
+            </label>
             {gerentesDisponibles.map(g => (
               <label key={g.id} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={filterGerentes.length === 0 || filterGerentes.includes(g.id)}
-                  onChange={() => toggleNumberFilter(g.id, filterGerentes, allGerenteIds, setFilterGerentes)}
+                  checked={filterGerentes.includes(g.id)}
+                  onChange={() => toggleNumberFilter(g.id, filterGerentes, setFilterGerentes)}
                 />
                 {g.nombre}
               </label>
@@ -186,14 +182,22 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
 
         <details className="relative flex-1 min-w-[220px]">
           <summary className="list-none cursor-pointer w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 outline-none">
-            Estado ({filterEstados.length === 0 ? 'Todos' : filterEstados.length})
+            Estado ({filterEstados.length === allEstadoValues.length ? 'Todos' : filterEstados.length})
           </summary>
           <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 max-h-64 overflow-y-auto">
+            <label className="flex items-center gap-2 text-xs font-black text-slate-700 cursor-pointer border-b border-slate-100 pb-2">
+              <input
+                type="checkbox"
+                checked={filterEstados.length === allEstadoValues.length}
+                onChange={(e) => setFilterEstados(e.target.checked ? allEstadoValues : [])}
+              />
+              Seleccionar todos
+            </label>
             {allEstadoValues.map((estado) => (
               <label key={estado} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={filterEstados.length === 0 || filterEstados.includes(estado)}
+                  checked={filterEstados.includes(estado)}
                   onChange={() => toggleStatusFilter(estado)}
                 />
                 {estado}
@@ -204,15 +208,23 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
 
         <details className="relative flex-1 min-w-[220px]">
           <summary className="list-none cursor-pointer w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-600 outline-none">
-            Linea de Negocio ({filterLineasNegocio.length === 0 ? 'Todas' : filterLineasNegocio.length})
+            Linea de Negocio ({filterLineasNegocio.length === allLineaIds.length ? 'Todas' : filterLineasNegocio.length})
           </summary>
           <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 max-h-64 overflow-y-auto">
+            <label className="flex items-center gap-2 text-xs font-black text-slate-700 cursor-pointer border-b border-slate-100 pb-2">
+              <input
+                type="checkbox"
+                checked={filterLineasNegocio.length === allLineaIds.length}
+                onChange={(e) => setFilterLineasNegocio(e.target.checked ? allLineaIds : [])}
+              />
+              Seleccionar todos
+            </label>
             {INITIAL_LINEAS.map(linea => (
               <label key={linea.id} className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={filterLineasNegocio.length === 0 || filterLineasNegocio.includes(linea.id)}
-                  onChange={() => toggleNumberFilter(linea.id, filterLineasNegocio, allLineaIds, setFilterLineasNegocio)}
+                  checked={filterLineasNegocio.includes(linea.id)}
+                  onChange={() => toggleNumberFilter(linea.id, filterLineasNegocio, setFilterLineasNegocio)}
                 />
                 {linea.nombre}
               </label>
