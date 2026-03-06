@@ -16,6 +16,13 @@ interface ProjectListProps {
 export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAddProject, onUpdateProject, onDeleteProject }) => {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
+  const [filters, setFilters] = useState({
+    title: '',
+    ot: '',
+    lineaNegocio: 'all',
+    gerente: 'all',
+    estado: 'all'
+  });
   
   const initialFormState = {
     Title: '',
@@ -31,6 +38,24 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
     users.filter(u => u.rol === 'gerente_proyecto'),
     [users]
   );
+
+  const filteredProjects = useMemo(() => {
+    const titleFilter = filters.title.trim().toLowerCase();
+    const otFilter = filters.ot.trim().toLowerCase();
+
+    return proyectos.filter((project) => {
+      const manager = users.find((u) => u.id === project.ID_GerenteProyecto);
+
+      const byTitle = !titleFilter || project.Title.toLowerCase().includes(titleFilter);
+      const byOt = !otFilter || project.OT.toLowerCase().includes(otFilter);
+      const byLinea = filters.lineaNegocio === 'all' || String(project.ID_LineaNegocio) === filters.lineaNegocio;
+      const byGerente = filters.gerente === 'all' || String(project.ID_GerenteProyecto) === filters.gerente;
+      const byEstado = filters.estado === 'all' || project.Estado === filters.estado;
+      const managerExists = !!manager || filters.gerente === 'all';
+
+      return byTitle && byOt && byLinea && byGerente && byEstado && managerExists;
+    });
+  }, [proyectos, users, filters]);
 
   const handleOpenCreate = () => {
     setProjectForm(initialFormState);
@@ -205,6 +230,56 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
       )}
 
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
+        <div className="px-8 py-6 border-b border-slate-100 bg-slate-50/40">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+            <input
+              type="text"
+              placeholder="Filtrar Proyecto"
+              value={filters.title}
+              onChange={(e) => setFilters((prev) => ({ ...prev, title: e.target.value }))}
+              className="w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-100"
+            />
+            <input
+              type="text"
+              placeholder="Filtrar OT"
+              value={filters.ot}
+              onChange={(e) => setFilters((prev) => ({ ...prev, ot: e.target.value }))}
+              className="w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-100"
+            />
+            <select
+              value={filters.lineaNegocio}
+              onChange={(e) => setFilters((prev) => ({ ...prev, lineaNegocio: e.target.value }))}
+              className="w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer"
+            >
+              <option value="all">Todas las lineas</option>
+              {INITIAL_LINEAS.map((linea) => (
+                <option key={linea.id} value={String(linea.id)}>{linea.nombre}</option>
+              ))}
+            </select>
+            <select
+              value={filters.gerente}
+              onChange={(e) => setFilters((prev) => ({ ...prev, gerente: e.target.value }))}
+              className="w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer"
+            >
+              <option value="all">Todos los gerentes</option>
+              {managers.map((manager) => (
+                <option key={manager.id} value={String(manager.id)}>{manager.nombre}</option>
+              ))}
+            </select>
+            <select
+              value={filters.estado}
+              onChange={(e) => setFilters((prev) => ({ ...prev, estado: e.target.value }))}
+              className="w-full px-3 py-2.5 bg-white text-slate-800 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer"
+            >
+              <option value="all">Todos los estados</option>
+              <option value="DECK">DECK</option>
+              <option value="WIP">WIP</option>
+              <option value="FROZEN">FROZEN</option>
+              <option value="FINALIZADA">FINALIZADA</option>
+            </select>
+          </div>
+        </div>
+
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50/50">
@@ -217,7 +292,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {proyectos.map(p => {
+            {filteredProjects.map(p => {
               const manager = users.find(u => u.id === p.ID_GerenteProyecto);
               const linea = INITIAL_LINEAS.find(l => l.id === p.ID_LineaNegocio);
               return (
@@ -278,6 +353,18 @@ export const ProjectList: React.FC<ProjectListProps> = ({ proyectos, users, onAd
                 <Briefcase size={40} className="opacity-20" />
              </div>
              <p className="text-sm font-bold uppercase tracking-widest text-slate-300">No hay proyectos registrados</p>
+          </div>
+        )}
+        {proyectos.length > 0 && filteredProjects.length === 0 && (
+          <div className="py-12 flex flex-col items-center justify-center text-slate-500 gap-3 border-t border-slate-100">
+            <p className="text-sm font-bold uppercase tracking-widest text-slate-400">Sin resultados para los filtros actuales</p>
+            <button
+              type="button"
+              onClick={() => setFilters({ title: '', ot: '', lineaNegocio: 'all', gerente: 'all', estado: 'all' })}
+              className="text-xs font-black uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-100 px-4 py-2 rounded-xl hover:bg-blue-100 transition"
+            >
+              Limpiar filtros
+            </button>
           </div>
         )}
       </div>
