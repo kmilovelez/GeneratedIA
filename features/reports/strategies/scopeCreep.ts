@@ -1,6 +1,6 @@
 
 import { Proyecto, Tarea, Actividad } from '../../../types/index';
-import { formatDate } from '../../../lib/utils';
+import { formatDate, INITIAL_DISCIPLINAS } from '../../../lib/utils';
 
 export const getScopeCreepData = (proyectos: Proyecto[], tareas: Tarea[], actividades: Actividad[]) => {
   const growth: any[] = [];
@@ -14,8 +14,12 @@ export const getScopeCreepData = (proyectos: Proyecto[], tareas: Tarea[], activi
     });
 
     extraActs.forEach(a => {
+      const disciplina = INITIAL_DISCIPLINAS.find((d) => d.id === t.ID_Disciplina)?.nombre || 'N/A';
+
       growth.push({
         'Proyecto': proyectos.find(p => p.OT === t.OT)?.Title || 'N/A',
+        'OT': t.OT || 'N/A',
+        'Disciplina': disciplina,
         'Tarea': t.Title,
         'Actividad Agregada': a.Title,
         'Fecha Tarea': formatDate(t.fecha_creacion),

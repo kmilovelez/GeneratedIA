@@ -43,7 +43,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ proyectos, tareas, act
     switch(type) {
       case 'proyectos': return getProjectStatusData(proyectos, tareas, filters);
       case 'alcance': return getScopeCreepData(proyectos, tareas, actividades);
-      case 'duracion': return getDurationData(tareas);
+      case 'duracion': return getDurationData(proyectos, tareas);
       case 'cumplimiento_fecha': return getDeadlineData(proyectos, tareas, users);
       case 'cumplimiento_diario': return getDailyData(proyectos, tareas, actividades, users);
       case 'alertas': return getAlertsData(alertas);

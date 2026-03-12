@@ -22,26 +22,35 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
           <h4 className="font-bold uppercase tracking-wider text-slate-800">{title}</h4>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 transition"><X size={24} /></button>
         </div>
-        <div className="p-8 overflow-y-auto flex-1 bg-white">
+        <div className="flex-1 bg-white px-8 py-6 min-h-0">
           {data.length > 0 ? (
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50 sticky top-0">
-                <tr>
-                  {Object.keys(data[0]).map(k => (
-                    <th key={k} className="px-4 py-3 text-[10px] font-black uppercase border-b text-slate-500 tracking-tighter">{k}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {data.map((row, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    {Object.values(row).map((v: any, j) => (
-                      <td key={j} className="px-4 py-3 text-sm text-slate-600">{v}</td>
+            <div className="max-h-[52vh] overflow-auto rounded-2xl border border-slate-100 bg-white">
+              <div className="min-w-max">
+                <table className="w-full text-left border-separate border-spacing-0">
+                  <thead>
+                    <tr>
+                      {Object.keys(data[0]).map(k => (
+                        <th
+                          key={k}
+                          className="sticky top-0 z-10 bg-slate-50 px-4 py-4 text-[10px] font-black uppercase border-b border-slate-200 text-slate-500 tracking-[0.08em]"
+                        >
+                          {k}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.map((row, i) => (
+                      <tr key={i} className="hover:bg-slate-50 transition-colors">
+                        {Object.values(row).map((v: any, j) => (
+                          <td key={j} className="border-b border-slate-100 px-4 py-4 text-sm text-slate-600 align-top">{v}</td>
+                        ))}
+                      </tr>
                     ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           ) : (
             <p className="text-center py-20 text-slate-400 italic">No hay datos disponibles para previsualizar con los filtros actuales.</p>
           )}

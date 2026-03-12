@@ -18,16 +18,16 @@ export const getDailyData = (
       const proyectoVinculado = proyectos.find((p) => p.OT === tareaMadre?.OT);
       const responsable = users.find((u) => u.id === tareaMadre?.ID_Ejecutor);
       const estadoActividad = a.IsCompleted ? 'FINALIZADA' : a.IsStarted ? 'WIP' : 'DECK';
+      const responsableAbreviado = responsable?.email?.split('@')[0] || 'sin_asignar';
 
       return {
         OT: proyectoVinculado?.OT || 'N/A',
-        Proyecto: proyectoVinculado?.Title || 'N/A',
-        Actividad: a.Title,
-        Responsable: responsable?.nombre || 'Sin Asignar',
+        Responsable: responsableAbreviado,
         Estado: estadoActividad,
         'Fecha Registro': formatDate(a.fecha_creacion),
-        'Tarea Madre': tareaMadre?.Title || 'N/A',
-        Cumplida: checkDailyCompliance(a) ? 'SI' : 'NO'
+        Cumplida: checkDailyCompliance(a) ? 'SI' : 'NO',
+        Actividad: a.Title,
+        'Tarea Madre': tareaMadre?.Title || 'N/A'
       };
     })
     .sort((a, b) => {
