@@ -16,16 +16,24 @@ import {
   TrendingUp,
   Zap
 } from 'lucide-react';
-import { Actividad, Alerta, ProjectStatus, Proyecto, Tarea } from '../../types/index';
+import { Actividad, ProjectStatus, Proyecto, Tarea } from '../../types/index';
 import { INITIAL_DISCIPLINAS } from '../../lib/utils';
 import { calculateBacklogHealth, calculateResourceEfficiencyByPeriod, checkDailyCompliance } from '../reports/strategies/kpiEngine';
 
 interface DashboardStatsProps {
   tareas: Tarea[];
   actividades: Actividad[];
-  alertas: Alerta[];
   proyectos: Proyecto[];
 }
+
+type GeneratedAlert = {
+  key: string;
+  kind: 'retrasada' | 'riesgo_cumplimiento';
+  ot: string;
+  disciplina: string;
+  tarea: string;
+  label: string;
+};
 
 type DisciplineProjectDetail = {
   ot: string;
@@ -43,7 +51,7 @@ type DisciplineStatusSummary = {
   details: Record<'WIP' | 'FROZEN' | 'DECK', DisciplineProjectDetail[]>;
 };
 
-export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, actividades, alertas, proyectos }) => {
+export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, actividades, proyectos }) => {
   const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [isDurationModalOpen, setIsDurationModalOpen] = useState(false);
@@ -146,6 +154,70 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
     });
   }, [finishedTasks, timeRefs]);
 
+  const generatedAlerts = useMemo<GeneratedAlert[]>(() => {
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    return tareas
+      .flatMap((task) => {
+        const project = proyectos.find((item) => item.OT === task.OT);
+        const discipline = INITIAL_DISCIPLINAS.find((item) => item.id === task.ID_Disciplina)?.nombre || 'N/A';
+        const projectIsOperational = project?.Estado === 'DECK' || project?.Estado === 'WIP';
+        const plannedStart = task.FPlaneadaInicioAct ? new Date(task.FPlaneadaInicioAct) : null;
+        const plannedFinish = task.FPlaneadaFinAct ? new Date(task.FPlaneadaFinAct) : null;
+        const expectedFinish = task.FEsperadaFin ? new Date(task.FEsperadaFin) : null;
+
+        const delayedStart =
+          task.Estado === 'DECK' &&
+          projectIsOperational &&
+          plannedStart !== null &&
+          !isNaN(plannedStart.getTime()) &&
+          plannedStart < startOfToday;
+
+        const completionRisk =
+          !delayedStart &&
+          task.Estado === 'WIP' &&
+          projectIsOperational &&
+          plannedFinish !== null &&
+          expectedFinish !== null &&
+          !isNaN(plannedFinish.getTime()) &&
+          !isNaN(expectedFinish.getTime()) &&
+          expectedFinish > plannedFinish;
+
+        const alertsForTask: GeneratedAlert[] = [];
+
+        if (delayedStart) {
+          alertsForTask.push({
+            key: `late-start-${task.id}`,
+            kind: 'retrasada',
+            ot: task.OT,
+            disciplina: discipline,
+            tarea: task.Title,
+            label: 'retrasada'
+          });
+        }
+
+        if (completionRisk) {
+          alertsForTask.push({
+            key: `delivery-risk-${task.id}`,
+            kind: 'riesgo_cumplimiento',
+            ot: task.OT,
+            disciplina: discipline,
+            tarea: task.Title,
+            label: 'riesgo de cumplimiento'
+          });
+        }
+
+        return alertsForTask;
+      })
+      .sort((a, b) => {
+        if (a.kind !== b.kind) {
+          return a.kind === 'retrasada' ? -1 : 1;
+        }
+        return a.ot.localeCompare(b.ot) || a.tarea.localeCompare(b.tarea);
+      });
+  }, [proyectos, tareas]);
+
   const statsByDiscipline = useMemo<DisciplineStatusSummary[]>(
     () =>
       INITIAL_DISCIPLINAS.map((d) => {
@@ -222,19 +294,24 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
           <h4 className="font-black text-slate-800 flex items-center gap-2 text-xs uppercase tracking-[0.2em]">
             <AlertTriangle size={16} className="text-amber-500" /> Alertas Criticas
           </h4>
-          <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-3 py-1 rounded-full border border-amber-200">{alertas.length} ACTIVAS</span>
+          <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-3 py-1 rounded-full border border-amber-200">{generatedAlerts.length} ACTIVAS</span>
         </div>
         <div className="p-6 overflow-y-auto max-h-[200px] custom-scrollbar">
-          {alertas.length > 0 ? (
+          {generatedAlerts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {alertas.map((a) => (
-                <div key={a.id} className="p-4 bg-white border border-slate-100 rounded-2xl flex gap-4 items-start shadow-sm hover:border-amber-200 transition-colors">
+              {generatedAlerts.map((alert) => (
+                <div key={alert.key} className="p-4 bg-white border border-slate-100 rounded-2xl flex gap-4 items-start shadow-sm hover:border-amber-200 transition-colors">
                   <div className="w-8 h-8 bg-amber-50 rounded-xl flex items-center justify-center shrink-0 border border-amber-100">
                     <Clock size={16} className="text-amber-500" />
                   </div>
-                  <div>
-                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">{a.tipo === 'retraso_inicio' ? 'Retraso en Inicio' : 'Riesgo de Finalizacion'}</p>
-                    <p className="text-[11px] text-slate-600 font-bold leading-relaxed">{a.mensaje}</p>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">
+                      {alert.kind === 'retrasada' ? 'Retraso en Inicio' : 'Riesgo de Cumplimiento'}
+                    </p>
+                    <p className="text-[11px] text-slate-700 font-bold leading-relaxed">
+                      {alert.ot} {alert.disciplina} {alert.tarea}{' '}
+                      <span className="text-red-600 uppercase">{alert.label}</span>
+                    </p>
                   </div>
                 </div>
               ))}

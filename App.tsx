@@ -196,7 +196,7 @@ export default function App() {
       />
       <main className="flex-1 ml-64 p-8">
         {activeTab === 'dashboard' && (
-          <DashboardStats tareas={tareas} actividades={actividades} alertas={alertas} proyectos={proyectos} />
+          <DashboardStats tareas={tareas} actividades={actividades} proyectos={proyectos} />
         )}
         {activeTab === 'proyectos' && (
           <ProjectList 
