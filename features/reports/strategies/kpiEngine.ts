@@ -118,4 +118,54 @@ export const calculateResourceEfficiency = (actividades: Actividad[]): number =>
   if (startedCount === 0) return 0;
   const completedCount = actividades.filter(a => a.IsCompleted).length;
   return Math.round((completedCount / startedCount) * 100);
-}
+};
+
+export const calculateResourceEfficiencyByPeriod = (actividades: Actividad[]) => {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+  const sevenDaysAgo = new Date(startOfToday);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+  const finishedActivities = actividades.filter((a) => {
+    if (!a.FechaFinalizacion) return false;
+    const finishedAt = new Date(a.FechaFinalizacion);
+    return !isNaN(finishedAt.getTime()) && finishedAt < startOfToday;
+  });
+
+  const calculatePct = (subset: Actividad[]) => {
+    if (subset.length === 0) return 0;
+    const compliant = subset.filter(checkDailyCompliance).length;
+    return Math.round((compliant / subset.length) * 100);
+  };
+
+  return {
+    diario: calculatePct(
+      finishedActivities.filter((a) => {
+        const finishedAt = new Date(a.FechaFinalizacion!);
+        return finishedAt >= startOfYesterday && finishedAt < startOfToday;
+      })
+    ),
+    semana: calculatePct(
+      finishedActivities.filter((a) => {
+        const finishedAt = new Date(a.FechaFinalizacion!);
+        return finishedAt >= sevenDaysAgo && finishedAt < startOfToday;
+      })
+    ),
+    mes: calculatePct(
+      finishedActivities.filter((a) => {
+        const finishedAt = new Date(a.FechaFinalizacion!);
+        return finishedAt >= startOfMonth && finishedAt < startOfToday;
+      })
+    ),
+    ytd: calculatePct(
+      finishedActivities.filter((a) => {
+        const finishedAt = new Date(a.FechaFinalizacion!);
+        return finishedAt >= startOfYear && finishedAt < startOfToday;
+      })
+    )
+  };
+};

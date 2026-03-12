@@ -15,7 +15,7 @@ import { getDailyData } from './strategies/daily';
 import { getAlertsData } from './strategies/alerts';
 
 // KPI Engine
-import { calculateProjectProgress, calculateResourceEfficiency } from './strategies/kpiEngine';
+import { calculateProjectProgress, calculateResourceEfficiencyByPeriod } from './strategies/kpiEngine';
 
 // Utils
 import { generateExport, ExportFormat } from './utils/exportUtils';
@@ -45,7 +45,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ proyectos, tareas, act
   // KPIs Globales centralizados
   const globalKpis = useMemo(() => ({
     progress: calculateProjectProgress(tareas),
-    efficiency: calculateResourceEfficiency(actividades)
+    efficiency: calculateResourceEfficiencyByPeriod(actividades)
   }), [tareas, actividades]);
 
   const calculateReportData = (type: string) => {
@@ -103,21 +103,32 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ proyectos, tareas, act
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex items-center justify-between group hover:border-emerald-400/50 hover:shadow-xl hover:shadow-emerald-50 transition-all duration-500">
-          <div className="flex items-center gap-6">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm group hover:border-emerald-400/50 hover:shadow-xl hover:shadow-emerald-50 transition-all duration-500">
+          <div className="flex items-start gap-6">
             <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-inner group-hover:bg-emerald-600 group-hover:text-white transition-all duration-500">
               <Zap size={32} />
             </div>
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Eficiencia Operativa</p>
-              <h3 className="text-4xl font-black text-slate-800 tracking-tight">{globalKpis.efficiency}%</h3>
+              <div className="grid grid-cols-4 gap-4 mt-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Diario</p>
+                  <p className="text-2xl font-black text-slate-800">{globalKpis.efficiency.diario}%</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Semana</p>
+                  <p className="text-2xl font-black text-slate-800">{globalKpis.efficiency.semana}%</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mes</p>
+                  <p className="text-2xl font-black text-slate-800">{globalKpis.efficiency.mes}%</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">YTD</p>
+                  <p className="text-2xl font-black text-slate-800">{globalKpis.efficiency.ytd}%</p>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="w-40 h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner p-[2px]">
-            <div 
-              className="bg-emerald-600 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(5,150,105,0.4)]" 
-              style={{ width: `${globalKpis.efficiency}%` }} 
-            />
           </div>
         </div>
       </section>
