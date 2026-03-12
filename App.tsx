@@ -10,6 +10,7 @@ import { ReportsView } from './features/reports/ReportsView';
 import { HistoricosView } from './features/historicos/HistoricosView';
 import { AdminView } from './features/admin/AdminView';
 import { ImportView } from './features/admin/ImportView';
+import { DatabaseView } from './features/database/DatabaseView';
 
 import { User, Proyecto, Tarea, Actividad, Alerta, ProjectStatus } from './types/index';
 import { DEFAULT_USERS } from './lib/utils';
@@ -19,7 +20,7 @@ import { isSupabaseConfigured } from './lib/supabaseClient';
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'proyectos' | 'tareas' | 'reportes' | 'historicos' | 'admin' | 'import'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'proyectos' | 'tareas' | 'reportes' | 'historicos' | 'database' | 'admin' | 'import'>('dashboard');
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   
@@ -117,7 +118,11 @@ export default function App() {
   const updateTaskStatus = async (taskId: number, newStatus: ProjectStatus) => {
     const current = tareas.find((t) => t.id === taskId);
     if (!current) return;
+    if (newStatus === 'DECK' && current.FRealInicio) return;
     const updates: Partial<Tarea> = { Estado: newStatus };
+    if (newStatus === 'WIP' && !current.FRealInicio) {
+      updates.FRealInicio = new Date().toISOString();
+    }
     if (newStatus === 'FINALIZADA' && !current.FRealFin) {
       updates.FRealFin = new Date().toISOString();
     } else if (newStatus !== 'FINALIZADA' && current.FRealFin) {
@@ -232,6 +237,15 @@ export default function App() {
           <HistoricosView 
             tareas={tareas} 
             actividades={actividades} 
+          />
+        )}
+        {activeTab === 'database' && (
+          <DatabaseView
+            users={users}
+            proyectos={proyectos}
+            tareas={tareas}
+            actividades={actividades}
+            alertas={alertas}
           />
         )}
         {activeTab === 'import' && <ImportView onImportSuccess={() => reloadData(false)} />}

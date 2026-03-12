@@ -295,6 +295,7 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
           const progress = taskActivities.length > 0 ? Math.round((taskActivities.filter(a => a.IsCompleted).length / taskActivities.length) * 100) : 0;
           const project = proyectos.find(p => p.OT === tarea.OT);
           const isFinished = tarea.Estado === 'FINALIZADA';
+          const hasStarted = Boolean(tarea.FRealInicio);
 
           return (
             <div key={tarea.ID_Unico_Tarea} className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col group/card">
@@ -302,7 +303,16 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="flex items-center gap-1 bg-slate-100/50 p-1 rounded-xl border border-slate-100">
                     {(['DECK', 'FROZEN', 'WIP'] as ProjectStatus[]).map((st) => (
-                      <button key={st} onClick={() => onUpdateTaskStatus(tarea.id, st)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase transition-all ${tarea.Estado === st ? getStatusColor(st) : 'text-slate-400 hover:bg-slate-200/50'}`}>
+                      <button
+                        key={st}
+                        onClick={() => onUpdateTaskStatus(tarea.id, st)}
+                        disabled={st === 'DECK' && hasStarted}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase transition-all ${
+                          tarea.Estado === st
+                            ? getStatusColor(st)
+                            : `text-slate-400 ${st === 'DECK' && hasStarted ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-200/50'}`
+                        }`}
+                      >
                         {st}
                       </button>
                     ))}

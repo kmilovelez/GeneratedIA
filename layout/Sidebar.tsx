@@ -1,11 +1,23 @@
-
 import React from 'react';
-import { LayoutDashboard, Briefcase, CheckSquare, BarChart3, History, Settings, Upload, LogOut, Shield } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Briefcase,
+  CheckSquare,
+  BarChart3,
+  History,
+  Settings,
+  Upload,
+  LogOut,
+  Shield,
+  Database
+} from 'lucide-react';
 import { User } from '../types/index';
 
 interface SidebarProps {
   activeTab: string;
-  setActiveTab: (tab: 'dashboard' | 'proyectos' | 'tareas' | 'reportes' | 'historicos' | 'admin' | 'import') => void;
+  setActiveTab: (
+    tab: 'dashboard' | 'proyectos' | 'tareas' | 'reportes' | 'historicos' | 'database' | 'admin' | 'import'
+  ) => void;
   currentUser: User;
   canManageUsers: boolean;
   onLogout: () => void;
@@ -18,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, curre
         <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-xl text-white">R</div>
         <div>
           <h1 className="font-bold text-sm leading-tight">Recursos Compartidos</h1>
-          <p className="text-xs text-slate-500">Sistema de Gestión</p>
+          <p className="text-xs text-slate-500">Sistema de Gestion</p>
         </div>
       </div>
       <nav className="flex-1 p-4 space-y-1">
@@ -35,7 +47,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, curre
           <BarChart3 size={18} /> Reportes
         </button>
         <button onClick={() => setActiveTab('historicos')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition ${activeTab === 'historicos' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-200'}`}>
-          <History size={18} /> Datos Históricos
+          <History size={18} /> Datos Historicos
+        </button>
+        <button onClick={() => setActiveTab('database')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition ${activeTab === 'database' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-200'}`}>
+          <Database size={18} /> Base de Datos
         </button>
         <button onClick={() => setActiveTab('import')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition ${activeTab === 'import' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-200'}`}>
           <Upload size={18} /> Importar Datos
@@ -55,10 +70,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, curre
             <p className="text-xs font-semibold truncate">{currentUser.nombre}</p>
             <p className="text-[10px] text-slate-500 capitalize">{currentUser.rol.replace('_', ' ')}</p>
           </div>
-          <button onClick={onLogout} className="text-slate-500 hover:text-red-400 transition" title="Cerrar Sesión"><LogOut size={16} /></button>
+          <button onClick={onLogout} className="text-slate-500 hover:text-red-400 transition" title="Cerrar Sesion"><LogOut size={16} /></button>
         </div>
         <div className="text-[10px] text-slate-400 text-center flex items-center justify-center gap-1">
-            <Shield size={10}/> Local Mode
+          <Shield size={10} /> Local Mode
         </div>
       </div>
     </div>
