@@ -12,11 +12,13 @@ import {
   BarChart3,
   X,
   ChevronRight,
-  Layers
+  Layers,
+  TrendingUp,
+  Zap
 } from 'lucide-react';
 import { Actividad, Alerta, ProjectStatus, Proyecto, Tarea } from '../../types/index';
 import { INITIAL_DISCIPLINAS } from '../../lib/utils';
-import { checkDailyCompliance } from '../reports/strategies/kpiEngine';
+import { calculateBacklogHealth, calculateResourceEfficiencyByPeriod, checkDailyCompliance } from '../reports/strategies/kpiEngine';
 
 interface DashboardStatsProps {
   tareas: Tarea[];
@@ -48,6 +50,8 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
   const [selectedDiscipline, setSelectedDiscipline] = useState<DisciplineStatusSummary | null>(null);
 
   const finishedTasks = tareas.filter((t) => t.Estado === 'FINALIZADA' && t.FRealFin);
+  const backlogHealth = useMemo(() => calculateBacklogHealth(tareas), [tareas]);
+  const operationalEfficiency = useMemo(() => calculateResourceEfficiencyByPeriod(actividades), [actividades]);
 
   const tasksOnTime = finishedTasks.filter((t) => {
     if (!t.FRealFin || !t.FPlaneadaFinAct) return false;
@@ -261,6 +265,24 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
           </div>
         </div>
 
+        <div onClick={() => setIsDurationModalOpen(true)} className="bg-white rounded-[2rem] border-2 border-transparent border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:border-emerald-300 transition-all cursor-pointer active:scale-95">
+          <div className="p-5 bg-emerald-50/50 border-b border-emerald-100 flex justify-between items-center group-hover:bg-emerald-50 transition-colors">
+            <h3 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em]">CUMPLIMIENTO DURACION</h3>
+            <div className="p-2 bg-white rounded-xl shadow-sm text-emerald-500 group-hover:rotate-12 transition-transform"><Timer size={18} /></div>
+          </div>
+          <div className="p-8 flex items-end justify-between">
+            <div>
+              <span className="text-4xl font-black text-slate-800 leading-none">{totalCumplimientoDuracion}%</span>
+              <p className="text-[10px] text-slate-400 font-black uppercase mt-3 tracking-widest flex items-center gap-1">
+                Ver Detalles <ChevronRight size={10} />
+              </p>
+            </div>
+            <div className="w-16 h-4 bg-slate-100 rounded-full overflow-hidden">
+              <div className="bg-emerald-500 h-full" style={{ width: `${totalCumplimientoDuracion}%` }} />
+            </div>
+          </div>
+        </div>
+
         <div onClick={() => setIsDailyModalOpen(true)} className="bg-white rounded-[2rem] border-2 border-transparent border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:border-blue-300 transition-all cursor-pointer active:scale-95">
           <div className="p-5 bg-blue-50/50 border-b border-blue-100 flex justify-between items-center group-hover:bg-blue-50 transition-colors">
             <h3 className="text-[10px] font-black text-blue-700 uppercase tracking-[0.2em]">CUMPLIMIENTO DIARIO</h3>
@@ -278,21 +300,59 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
             </div>
           </div>
         </div>
+      </div>
 
-        <div onClick={() => setIsDurationModalOpen(true)} className="bg-white rounded-[2rem] border-2 border-transparent border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:border-emerald-300 transition-all cursor-pointer active:scale-95">
-          <div className="p-5 bg-emerald-50/50 border-b border-emerald-100 flex justify-between items-center group-hover:bg-emerald-50 transition-colors">
-            <h3 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em]">CUMPLIMIENTO DURACION</h3>
-            <div className="p-2 bg-white rounded-xl shadow-sm text-emerald-500 group-hover:rotate-12 transition-transform"><Timer size={18} /></div>
-          </div>
-          <div className="p-8 flex items-end justify-between">
-            <div>
-              <span className="text-4xl font-black text-slate-800 leading-none">{totalCumplimientoDuracion}%</span>
-              <p className="text-[10px] text-slate-400 font-black uppercase mt-3 tracking-widest flex items-center gap-1">
-                Ver Detalles <ChevronRight size={10} />
-              </p>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm group hover:border-blue-400/50 hover:shadow-xl hover:shadow-blue-50 transition-all duration-500">
+          <div className="flex items-start gap-6">
+            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
+              <TrendingUp size={32} />
             </div>
-            <div className="w-16 h-4 bg-slate-100 rounded-full overflow-hidden">
-              <div className="bg-emerald-500 h-full" style={{ width: `${totalCumplimientoDuracion}%` }} />
+            <div className="flex-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Salud del Backlog</p>
+              <div className="grid grid-cols-3 gap-4 mt-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Activo</p>
+                  <p className="text-3xl font-black text-slate-800 tracking-tight">{backlogHealth.activeBacklog}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vencidas</p>
+                  <p className="text-3xl font-black text-slate-800 tracking-tight">{backlogHealth.overdueTasks}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">% Vencido</p>
+                  <p className="text-3xl font-black text-slate-800 tracking-tight">{backlogHealth.overdueBacklogPct}%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm group hover:border-emerald-400/50 hover:shadow-xl hover:shadow-emerald-50 transition-all duration-500">
+          <div className="flex items-start gap-6">
+            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-inner group-hover:bg-emerald-600 group-hover:text-white transition-all duration-500">
+              <Zap size={32} />
+            </div>
+            <div className="flex-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Eficiencia Operativa</p>
+              <div className="grid grid-cols-4 gap-4 mt-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Diario</p>
+                  <p className="text-2xl font-black text-slate-800">{operationalEfficiency.diario}%</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Semana</p>
+                  <p className="text-2xl font-black text-slate-800">{operationalEfficiency.semana}%</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mes</p>
+                  <p className="text-2xl font-black text-slate-800">{operationalEfficiency.mes}%</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">YTD</p>
+                  <p className="text-2xl font-black text-slate-800">{operationalEfficiency.ytd}%</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

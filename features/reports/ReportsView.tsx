@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Briefcase, Filter, Timer, CalendarCheck, CheckSquare, AlertTriangle, TrendingUp, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { Briefcase, Filter, Timer, CalendarCheck, CheckSquare, AlertTriangle } from 'lucide-react';
 import { Proyecto, Tarea, Actividad, Alerta, User } from '../../types/index';
 
 // UI Components
@@ -13,9 +13,6 @@ import { getDurationData } from './strategies/duration';
 import { getDeadlineData } from './strategies/deadline';
 import { getDailyData } from './strategies/daily';
 import { getAlertsData } from './strategies/alerts';
-
-// KPI Engine
-import { calculateProjectProgress, calculateResourceEfficiencyByPeriod } from './strategies/kpiEngine';
 
 // Utils
 import { generateExport, ExportFormat } from './utils/exportUtils';
@@ -41,12 +38,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ proyectos, tareas, act
   const [generating, setGenerating] = useState<boolean>(false);
   const [previewReport, setPreviewReport] = useState<{title: string, data: any[], type: string} | null>(null);
   const [filters] = useState({ linea: 'all' });
-
-  // KPIs Globales centralizados
-  const globalKpis = useMemo(() => ({
-    progress: calculateProjectProgress(tareas),
-    efficiency: calculateResourceEfficiencyByPeriod(actividades)
-  }), [tareas, actividades]);
 
   const calculateReportData = (type: string) => {
     switch(type) {
@@ -83,56 +74,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ proyectos, tareas, act
         </div>
       </header>
 
-      {/* Resumen Ejecutivo de KPIs (Consumiendo kpiEngine) */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex items-center justify-between group hover:border-blue-400/50 hover:shadow-xl hover:shadow-blue-50 transition-all duration-500">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
-              <TrendingUp size={32} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Progreso Global de Tareas</p>
-              <h3 className="text-4xl font-black text-slate-800 tracking-tight">{globalKpis.progress}%</h3>
-            </div>
-          </div>
-          <div className="w-40 h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner p-[2px]">
-            <div 
-              className="bg-blue-600 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(37,99,235,0.4)]" 
-              style={{ width: `${globalKpis.progress}%` }} 
-            />
-          </div>
-        </div>
-
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm group hover:border-emerald-400/50 hover:shadow-xl hover:shadow-emerald-50 transition-all duration-500">
-          <div className="flex items-start gap-6">
-            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-inner group-hover:bg-emerald-600 group-hover:text-white transition-all duration-500">
-              <Zap size={32} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Eficiencia Operativa</p>
-              <div className="grid grid-cols-4 gap-4 mt-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Diario</p>
-                  <p className="text-2xl font-black text-slate-800">{globalKpis.efficiency.diario}%</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Semana</p>
-                  <p className="text-2xl font-black text-slate-800">{globalKpis.efficiency.semana}%</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mes</p>
-                  <p className="text-2xl font-black text-slate-800">{globalKpis.efficiency.mes}%</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">YTD</p>
-                  <p className="text-2xl font-black text-slate-800">{globalKpis.efficiency.ytd}%</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {REPORT_DEFINITIONS.map(report => (
           <ReportCard

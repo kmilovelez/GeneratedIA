@@ -112,6 +112,32 @@ export const calculateProjectProgress = (tareas: Tarea[]): number => {
   return Math.round((completedCount / tareas.length) * 100);
 };
 
+export const calculateBacklogHealth = (tareas: Tarea[]) => {
+  if (!tareas || tareas.length === 0) {
+    return {
+      activeBacklog: 0,
+      overdueTasks: 0,
+      overdueBacklogPct: 0
+    };
+  }
+
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  const activeBacklog = tareas.filter((t) => t.Estado !== 'FINALIZADA');
+  const overdueTasks = activeBacklog.filter((t) => {
+    if (!t.FPlaneadaFinAct) return false;
+    const plannedEnd = new Date(t.FPlaneadaFinAct);
+    return !isNaN(plannedEnd.getTime()) && plannedEnd < startOfToday;
+  });
+
+  return {
+    activeBacklog: activeBacklog.length,
+    overdueTasks: overdueTasks.length,
+    overdueBacklogPct: activeBacklog.length === 0 ? 0 : Math.round((overdueTasks.length / activeBacklog.length) * 100)
+  };
+};
+
 export const calculateResourceEfficiency = (actividades: Actividad[]): number => {
   if (!actividades || actividades.length === 0) return 0;
   const startedCount = actividades.filter(a => a.IsStarted).length;
