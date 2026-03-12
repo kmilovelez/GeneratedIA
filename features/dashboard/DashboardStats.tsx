@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Actividad, Alerta, ProjectStatus, Proyecto, Tarea } from '../../types/index';
 import { INITIAL_DISCIPLINAS } from '../../lib/utils';
+import { checkDailyCompliance } from '../reports/strategies/kpiEngine';
 
 interface DashboardStatsProps {
   tareas: Tarea[];
@@ -54,10 +55,8 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
   }).length;
   const totalCumplimientoFecha = finishedTasks.length > 0 ? Math.round((tasksOnTime / finishedTasks.length) * 100) : 0;
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const dailyActivities = actividades.filter((a) => a.fecha_creacion.startsWith(todayStr));
-  const finishedDaily = dailyActivities.filter((a) => a.IsCompleted).length;
-  const totalCumplimientoDiario = dailyActivities.length > 0 ? Math.round((finishedDaily / dailyActivities.length) * 100) : 0;
+  const compliantDaily = actividades.filter((a) => checkDailyCompliance(a)).length;
+  const totalCumplimientoDiario = actividades.length > 0 ? Math.round((compliantDaily / actividades.length) * 100) : 0;
 
   const tasksInDuration = finishedTasks.filter((t) => {
     if (!t.FRealInicio || !t.FRealFin || !t.FPlaneadaInicioAct || !t.FPlaneadaFinAct) return false;
@@ -99,8 +98,8 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
   const dailyBreakdown = useMemo(() => {
     const calculatePct = (subset: Actividad[]) => {
       if (subset.length === 0) return 0;
-      const done = subset.filter((a) => a.IsCompleted).length;
-      return Math.round((done / subset.length) * 100);
+      const compliant = subset.filter((a) => checkDailyCompliance(a)).length;
+      return Math.round((compliant / subset.length) * 100);
     };
 
     return INITIAL_DISCIPLINAS.map((d) => {
@@ -368,7 +367,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
         data={dailyBreakdown}
         colorClass="blue"
         icon={<CheckSquare size={28} strokeWidth={3} />}
-        helpText="Porcentaje de actividades completadas frente al total de actividades creadas por disciplina."
+        helpText="Porcentaje de actividades cuya fecha real de finalizacion menos la fecha real de inicio es menor o igual a 24 horas."
       />
 
       <ComplianceDetailModal

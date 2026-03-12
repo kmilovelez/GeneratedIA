@@ -29,7 +29,10 @@ export const checkDateCompliance = (tarea: Tarea): boolean => {
 
 export const checkDailyCompliance = (actividad: Actividad): boolean => {
   if (!actividad.FechaInicio || !actividad.FechaFinalizacion) return false;
-  return getDaysDiff(actividad.FechaInicio, actividad.FechaFinalizacion) === 1;
+  const start = new Date(actividad.FechaInicio);
+  const end = new Date(actividad.FechaFinalizacion);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return false;
+  return end.getTime() - start.getTime() <= 24 * 60 * 60 * 1000;
 };
 
 /**

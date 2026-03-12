@@ -67,11 +67,7 @@ export default function App() {
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
-    if (user.rol === 'administrador' || user.rol === 'gerente_proyecto') {
-      setActiveTab('admin');
-    } else {
-      setActiveTab('dashboard');
-    }
+    setActiveTab('dashboard');
   };
 
   const createUser = async (userData: Omit<User, 'id'>) => {
