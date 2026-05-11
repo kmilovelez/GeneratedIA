@@ -56,6 +56,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [isDurationModalOpen, setIsDurationModalOpen] = useState(false);
   const [isBacklogHealthModalOpen, setIsBacklogHealthModalOpen] = useState(false);
+  const [isOperationalEfficiencyModalOpen, setIsOperationalEfficiencyModalOpen] = useState(false);
   const [selectedDiscipline, setSelectedDiscipline] = useState<DisciplineStatusSummary | null>(null);
 
   const finishedTasks = tareas.filter((t) => t.Estado === 'FINALIZADA' && t.FRealFin);
@@ -70,6 +71,21 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
         ...calculateBacklogHealth(tareas.filter((t) => t.ID_Disciplina === d.id))
       })),
     [tareas]
+  );
+
+  const operationalEfficiencyBreakdown = useMemo(
+    () =>
+      INITIAL_DISCIPLINAS.map((d) => {
+        const taskIds = new Set(tareas.filter((t) => t.ID_Disciplina === d.id).map((t) => t.ID_Unico_Tarea));
+        const disciplineActivities = actividades.filter((a) => taskIds.has(a.ID_Unico_Tarea));
+
+        return {
+          id: d.id,
+          nombre: d.nombre,
+          ...calculateResourceEfficiencyByPeriod(disciplineActivities)
+        };
+      }),
+    [actividades, tareas]
   );
 
   const tasksOnTime = finishedTasks.filter((t) => {
@@ -422,7 +438,10 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm group hover:border-emerald-400/50 hover:shadow-xl hover:shadow-emerald-50 transition-all duration-500">
+        <div
+          onClick={() => setIsOperationalEfficiencyModalOpen(true)}
+          className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm group hover:border-emerald-400/50 hover:shadow-xl hover:shadow-emerald-50 transition-all duration-500 cursor-pointer active:scale-[0.99]"
+        >
           <div className="flex items-start gap-6">
             <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-inner group-hover:bg-emerald-600 group-hover:text-white transition-all duration-500">
               <Zap size={32} />
@@ -447,6 +466,9 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
                   <p className="text-2xl font-black text-slate-800">{operationalEfficiency.ytd}%</p>
                 </div>
               </div>
+              <p className="text-[10px] text-slate-400 font-black uppercase mt-5 tracking-widest flex items-center gap-1">
+                Ver Detalles <ChevronRight size={10} />
+              </p>
             </div>
           </div>
         </div>
@@ -538,6 +560,12 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ tareas, activida
         isOpen={isBacklogHealthModalOpen}
         onClose={() => setIsBacklogHealthModalOpen(false)}
         data={backlogHealthBreakdown}
+      />
+
+      <OperationalEfficiencyModal
+        isOpen={isOperationalEfficiencyModalOpen}
+        onClose={() => setIsOperationalEfficiencyModalOpen(false)}
+        data={operationalEfficiencyBreakdown}
       />
 
       <DisciplineProjectsModal discipline={selectedDiscipline} onClose={() => setSelectedDiscipline(null)} />
@@ -717,6 +745,89 @@ const BacklogHealthModal: React.FC<{
             <AlertTriangle size={24} className="text-slate-400 shrink-0" />
             <p className="text-xs text-blue-600 font-bold leading-relaxed">
               Mismas metricas consolidadas de la tarjeta, calculadas con el backlog activo de cada disciplina.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end">
+          <button onClick={onClose} className="px-10 py-4 bg-white border-2 border-slate-200 text-slate-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 transition-all active:scale-95 shadow-sm">
+            Cerrar Detalle
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const OperationalEfficiencyModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  data: Array<{ id: number; nombre: string; diario: number; semana: number; mes: number; ytd: number }>;
+}> = ({ isOpen, onClose, data }) => {
+  if (!isOpen) return null;
+
+  const renderPctCell = (value: number) => (
+    <td className="px-6 py-5 text-center">
+      <div className="flex flex-col items-center gap-1">
+        <span className={`text-xl font-black ${value >= 80 ? 'text-emerald-600' : 'text-slate-800'}`}>{value}%</span>
+        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div className="bg-emerald-600 h-full rounded-full" style={{ width: `${value}%` }} />
+        </div>
+      </div>
+    </td>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
+      <div className="relative bg-white rounded-[2.5rem] shadow-2xl w-full max-w-5xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
+        <div className="p-8 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-xl">
+              <Zap size={28} strokeWidth={3} />
+            </div>
+            <div>
+              <h4 className="text-2xl font-black text-slate-800 tracking-tight uppercase">Eficiencia Operativa</h4>
+              <p className="text-xs text-slate-500 font-bold tracking-widest uppercase mt-1">Desglose por Disciplina</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-12 h-12 flex items-center justify-center bg-white rounded-2xl border border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all active:scale-90">
+            <X size={24} strokeWidth={3} />
+          </button>
+        </div>
+
+        <div className="p-10 bg-white max-h-[60vh] overflow-y-auto custom-scrollbar">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-separate border-spacing-y-4">
+              <thead>
+                <tr>
+                  <th className="px-6 py-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Disciplina</th>
+                  <th className="px-6 py-2 text-[10px] font-black text-emerald-600 uppercase tracking-[0.3em] text-center bg-emerald-50/50 rounded-l-xl">Diario</th>
+                  <th className="px-6 py-2 text-[10px] font-black text-emerald-600 uppercase tracking-[0.3em] text-center bg-emerald-50/50">Semana</th>
+                  <th className="px-6 py-2 text-[10px] font-black text-emerald-600 uppercase tracking-[0.3em] text-center bg-emerald-50/50">Mes</th>
+                  <th className="px-6 py-2 text-[10px] font-black text-emerald-600 uppercase tracking-[0.3em] text-center bg-emerald-50/50 rounded-r-xl">YTD</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((row) => (
+                  <tr key={row.id} className="group hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-5">
+                      <span className="text-sm font-black text-slate-800 tracking-tight group-hover:text-emerald-600 transition-colors">{row.nombre}</span>
+                    </td>
+                    {renderPctCell(row.diario)}
+                    {renderPctCell(row.semana)}
+                    {renderPctCell(row.mes)}
+                    {renderPctCell(row.ytd)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-10 p-6 bg-emerald-50/50 rounded-3xl border border-emerald-100 flex items-center gap-4">
+            <AlertTriangle size={24} className="text-slate-400 shrink-0" />
+            <p className="text-xs text-emerald-600 font-bold leading-relaxed">
+              Mismas metricas consolidadas de la tarjeta, calculadas con las actividades asociadas a las tareas de cada disciplina.
             </p>
           </div>
         </div>
