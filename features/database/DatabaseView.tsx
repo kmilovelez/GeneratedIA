@@ -40,15 +40,32 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   actividades,
   alertas
 }) => {
+  const usersById = useMemo(
+    () => new Map(users.map((user) => [user.id, user])),
+    [users]
+  );
+
+  const taskRows = useMemo(
+    () =>
+      toRows(
+        tareas.map((tarea) => ({
+          ...tarea,
+          Gerente_de_tarea: usersById.get(tarea.GerenteTarea)?.nombre ?? 'Usuario no encontrado',
+          Ejecutor: usersById.get(tarea.ID_Ejecutor)?.nombre ?? 'Usuario no encontrado'
+        }))
+      ),
+    [tareas, usersById]
+  );
+
   const tables = useMemo<TableDefinition[]>(
     () => [
       { key: 'users', label: 'Usuarios', rows: toRows(users) },
       { key: 'proyectos', label: 'Proyectos', rows: toRows(proyectos) },
-      { key: 'tareas', label: 'Tareas', rows: toRows(tareas) },
+      { key: 'tareas', label: 'Tareas', rows: taskRows },
       { key: 'actividades', label: 'Actividades', rows: toRows(actividades) },
       { key: 'alertas', label: 'Alertas', rows: toRows(alertas) }
     ],
-    [users, proyectos, tareas, actividades, alertas]
+    [users, proyectos, taskRows, actividades, alertas]
   );
 
   const [selectedTable, setSelectedTable] = useState<TableKey>('tareas');
