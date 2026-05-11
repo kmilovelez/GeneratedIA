@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Database, Filter, TableProperties } from 'lucide-react';
 import { Actividad, Alerta, Proyecto, Tarea, User } from '../../types/index';
-import { INITIAL_DISCIPLINAS } from '../../lib/utils';
+import { INITIAL_DISCIPLINAS, INITIAL_LINEAS } from '../../lib/utils';
 
 interface DatabaseViewProps {
   users: User[];
@@ -53,6 +53,8 @@ const TASK_NON_FILTERABLE_COLUMNS = [
   'ID_Unico_Tarea',
   'RazonRetraso'
 ];
+const PROJECT_HIDDEN_COLUMNS = ['ID_LineaNegocio', 'ID_GerenteProyecto'];
+const PROJECT_NON_FILTERABLE_COLUMNS = ['id', 'fecha_creacion'];
 
 export const DatabaseView: React.FC<DatabaseViewProps> = ({
   users,
@@ -69,6 +71,35 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   const disciplinasById = useMemo(
     () => new Map(INITIAL_DISCIPLINAS.map((disciplina) => [disciplina.id, disciplina.nombre])),
     []
+  );
+
+  const lineasById = useMemo(
+    () => new Map(INITIAL_LINEAS.map((linea) => [linea.id, linea.nombre])),
+    []
+  );
+
+  const projectRows = useMemo(
+    () =>
+      toRows(
+        proyectos.map((proyecto) => {
+          const {
+            ID_LineaNegocio: _idLineaNegocio,
+            ID_GerenteProyecto: _idGerenteProyecto,
+            ...rest
+          } = proyecto;
+
+          return {
+            id: rest.id,
+            Title: rest.Title,
+            OT: rest.OT,
+            Linea_de_negocio: lineasById.get(proyecto.ID_LineaNegocio) ?? 'Linea no encontrada',
+            Gerente_de_proyecto: usersById.get(proyecto.ID_GerenteProyecto)?.nombre ?? 'Usuario no encontrado',
+            Estado: rest.Estado,
+            fecha_creacion: rest.fecha_creacion
+          };
+        })
+      ),
+    [lineasById, proyectos, usersById]
   );
 
   const taskRows = useMemo(
@@ -110,12 +141,12 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   const tables = useMemo<TableDefinition[]>(
     () => [
       { key: 'users', label: 'Usuarios', rows: toRows(users) },
-      { key: 'proyectos', label: 'Proyectos', rows: toRows(proyectos) },
+      { key: 'proyectos', label: 'Proyectos', rows: projectRows },
       { key: 'tareas', label: 'Tareas', rows: taskRows },
       { key: 'actividades', label: 'Actividades', rows: toRows(actividades) },
       { key: 'alertas', label: 'Alertas', rows: toRows(alertas) }
     ],
-    [users, proyectos, taskRows, actividades, alertas]
+    [users, projectRows, taskRows, actividades, alertas]
   );
 
   const [selectedTable, setSelectedTable] = useState<TableKey>('tareas');
@@ -133,14 +164,27 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     currentTable.rows.forEach((row) => Object.keys(row).forEach((key) => keys.add(key)));
     const allColumns = Array.from(keys);
 
-    if (selectedTable !== 'tareas') return allColumns;
+    if (selectedTable === 'proyectos') {
+      return allColumns.filter((column) => !PROJECT_HIDDEN_COLUMNS.includes(column));
+    }
 
-    return allColumns.filter((column) => !TASK_HIDDEN_COLUMNS.includes(column));
+    if (selectedTable === 'tareas') {
+      return allColumns.filter((column) => !TASK_HIDDEN_COLUMNS.includes(column));
+    }
+
+    return allColumns;
   }, [currentTable, selectedTable]);
 
   const filterColumns = useMemo(() => {
-    if (selectedTable !== 'tareas') return columns;
-    return columns.filter((column) => !TASK_NON_FILTERABLE_COLUMNS.includes(column));
+    if (selectedTable === 'proyectos') {
+      return columns.filter((column) => !PROJECT_NON_FILTERABLE_COLUMNS.includes(column));
+    }
+
+    if (selectedTable === 'tareas') {
+      return columns.filter((column) => !TASK_NON_FILTERABLE_COLUMNS.includes(column));
+    }
+
+    return columns;
   }, [columns, selectedTable]);
 
   const columnOptions = useMemo(() => {
