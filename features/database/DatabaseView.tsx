@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Database, Filter, TableProperties } from 'lucide-react';
 import { Actividad, Alerta, Proyecto, Tarea, User } from '../../types/index';
+import { INITIAL_DISCIPLINAS } from '../../lib/utils';
 
 interface DatabaseViewProps {
   users: User[];
@@ -33,6 +34,26 @@ const toRows = <T extends object>(items: T[]): TableRow[] =>
     }, {})
   );
 
+const TASK_HIDDEN_COLUMNS = ['ID_Disciplina', 'GerenteTarea', 'ID_Ejecutor'];
+const TASK_DATE_FILTER_COLUMNS = [
+  'FPlaneadaInicioOrig',
+  'FPlaneadaFinOrig',
+  'FPlaneadaInicioAct',
+  'FPlaneadaFinAct',
+  'FEsperadaIni',
+  'FEsperadaFin',
+  'FRealInicio',
+  'FRealFin',
+  'fecha_creacion'
+];
+const TASK_NON_FILTERABLE_COLUMNS = [
+  ...TASK_DATE_FILTER_COLUMNS,
+  'id',
+  'Title',
+  'ID_Unico_Tarea',
+  'RazonRetraso'
+];
+
 export const DatabaseView: React.FC<DatabaseViewProps> = ({
   users,
   proyectos,
@@ -45,16 +66,45 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     [users]
   );
 
+  const disciplinasById = useMemo(
+    () => new Map(INITIAL_DISCIPLINAS.map((disciplina) => [disciplina.id, disciplina.nombre])),
+    []
+  );
+
   const taskRows = useMemo(
     () =>
       toRows(
-        tareas.map((tarea) => ({
-          ...tarea,
-          Gerente_de_tarea: usersById.get(tarea.GerenteTarea)?.nombre ?? 'Usuario no encontrado',
-          Ejecutor: usersById.get(tarea.ID_Ejecutor)?.nombre ?? 'Usuario no encontrado'
-        }))
+        tareas.map((tarea) => {
+          const {
+            ID_Disciplina: _idDisciplina,
+            GerenteTarea: _gerenteTarea,
+            ID_Ejecutor: _idEjecutor,
+            ...rest
+          } = tarea;
+
+          return {
+            id: rest.id,
+            Title: rest.Title,
+            OT: rest.OT,
+            Disciplina: disciplinasById.get(tarea.ID_Disciplina) ?? 'Disciplina no encontrada',
+            Gerente_de_tarea: usersById.get(tarea.GerenteTarea)?.nombre ?? 'Usuario no encontrado',
+            Ejecutor: usersById.get(tarea.ID_Ejecutor)?.nombre ?? 'Usuario no encontrado',
+            Estado: rest.Estado,
+            FPlaneadaInicioOrig: rest.FPlaneadaInicioOrig,
+            FPlaneadaFinOrig: rest.FPlaneadaFinOrig,
+            FPlaneadaInicioAct: rest.FPlaneadaInicioAct,
+            FPlaneadaFinAct: rest.FPlaneadaFinAct,
+            FEsperadaIni: rest.FEsperadaIni,
+            FEsperadaFin: rest.FEsperadaFin,
+            FRealInicio: rest.FRealInicio,
+            FRealFin: rest.FRealFin,
+            RazonRetraso: rest.RazonRetraso,
+            ID_Unico_Tarea: rest.ID_Unico_Tarea,
+            fecha_creacion: rest.fecha_creacion
+          };
+        })
       ),
-    [tareas, usersById]
+    [disciplinasById, tareas, usersById]
   );
 
   const tables = useMemo<TableDefinition[]>(
@@ -81,27 +131,37 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     if (!currentTable) return [];
     const keys = new Set<string>();
     currentTable.rows.forEach((row) => Object.keys(row).forEach((key) => keys.add(key)));
-    return Array.from(keys);
-  }, [currentTable]);
+    const allColumns = Array.from(keys);
+
+    if (selectedTable !== 'tareas') return allColumns;
+
+    return allColumns.filter((column) => !TASK_HIDDEN_COLUMNS.includes(column));
+  }, [currentTable, selectedTable]);
+
+  const filterColumns = useMemo(() => {
+    if (selectedTable !== 'tareas') return columns;
+    return columns.filter((column) => !TASK_NON_FILTERABLE_COLUMNS.includes(column));
+  }, [columns, selectedTable]);
 
   const columnOptions = useMemo(() => {
-    return columns.reduce<Record<string, string[]>>((acc, column) => {
+    return filterColumns.reduce<Record<string, string[]>>((acc, column) => {
       const values = new Set<string>(currentTable?.rows.map((row) => row[column] ?? '') ?? []);
       acc[column] = Array.from(values).sort((a, b) => a.localeCompare(b));
       return acc;
     }, {});
-  }, [columns, currentTable]);
+  }, [filterColumns, currentTable]);
 
   const filteredRows = useMemo(() => {
     if (!currentTable) return [];
     return currentTable.rows.filter((row) =>
       columns.every((column) => {
+        if (!filterColumns.includes(column)) return true;
         const selectedValues = columnFilters[column];
         if (!selectedValues || selectedValues.length === 0) return false;
         return selectedValues.includes(row[column] ?? '');
       })
     );
-  }, [currentTable, columns, columnFilters]);
+  }, [currentTable, columns, filterColumns, columnFilters]);
 
   const activitiesByTask = useMemo(() => {
     return actividades.reduce<Record<string, Actividad[]>>((acc, activity) => {
@@ -129,10 +189,10 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     visibleTaskIds.every((taskId) => expandedTaskIds.includes(taskId));
 
   useEffect(() => {
-    if (columns.length === 0) return;
+    if (filterColumns.length === 0) return;
 
     setColumnFilters((prev) =>
-      columns.reduce<Record<string, string[]>>((acc, column) => {
+      filterColumns.reduce<Record<string, string[]>>((acc, column) => {
         const options = columnOptions[column] ?? [];
         const previousSelection = prev[column];
 
@@ -145,7 +205,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         return acc;
       }, {})
     );
-  }, [columns, columnOptions, selectedTable]);
+  }, [filterColumns, columnOptions, selectedTable]);
 
   const handleTableChange = (tableKey: TableKey) => {
     setSelectedTable(tableKey);
@@ -217,7 +277,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
           <span className="text-[10px] font-black uppercase tracking-widest">Filtros por columna</span>
         </div>
         <div className="flex flex-wrap items-start gap-3">
-          {columns.map((column) => {
+          {filterColumns.map((column) => {
             const options = columnOptions[column] ?? [];
             const selectedValues = columnFilters[column] ?? [];
             const isAllSelected = options.length > 0 && selectedValues.length === options.length;
