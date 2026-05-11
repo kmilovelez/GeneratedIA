@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Database, Filter, TableProperties } from 'lucide-react';
-import { Actividad, Alerta, Proyecto, Tarea, User } from '../../types/index';
+import { Actividad, Proyecto, Tarea, User } from '../../types/index';
 import { INITIAL_DISCIPLINAS, INITIAL_LINEAS } from '../../lib/utils';
 
 interface DatabaseViewProps {
@@ -8,10 +8,9 @@ interface DatabaseViewProps {
   proyectos: Proyecto[];
   tareas: Tarea[];
   actividades: Actividad[];
-  alertas: Alerta[];
 }
 
-type TableKey = 'users' | 'proyectos' | 'tareas' | 'actividades' | 'alertas';
+type TableKey = 'users' | 'proyectos' | 'tareas';
 type TableRow = Record<string, string>;
 
 type TableDefinition = {
@@ -60,8 +59,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   users,
   proyectos,
   tareas,
-  actividades,
-  alertas
+  actividades
 }) => {
   const usersById = useMemo(
     () => new Map(users.map((user) => [user.id, user])),
@@ -142,11 +140,9 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     () => [
       { key: 'users', label: 'Usuarios', rows: toRows(users) },
       { key: 'proyectos', label: 'Proyectos', rows: projectRows },
-      { key: 'tareas', label: 'Tareas', rows: taskRows },
-      { key: 'actividades', label: 'Actividades', rows: toRows(actividades) },
-      { key: 'alertas', label: 'Alertas', rows: toRows(alertas) }
+      { key: 'tareas', label: 'Tareas', rows: taskRows }
     ],
-    [users, projectRows, taskRows, actividades, alertas]
+    [users, projectRows, taskRows]
   );
 
   const [selectedTable, setSelectedTable] = useState<TableKey>('tareas');

@@ -241,7 +241,6 @@ export default function App() {
             proyectos={proyectos}
             tareas={tareas}
             actividades={actividades}
-            alertas={alertas}
           />
         )}
         {activeTab === 'import' && <ImportView onImportSuccess={() => reloadData(false)} />}
