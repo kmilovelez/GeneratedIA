@@ -16,6 +16,18 @@ interface DailyTasksProps {
   onToggleActivity: (activityId: number, field: 'IsStarted' | 'IsCompleted') => void;
 }
 
+type NewTaskForm = {
+  Title: string;
+  OT: string;
+  ID_Disciplina: number;
+  ID_Ejecutor: number | '';
+  GerenteTarea: number | '';
+  FPlaneadaInicioOrig: string;
+  FPlaneadaFinOrig: string;
+  FEsperadaIni: string;
+  FEsperadaFin: string;
+};
+
 export const DailyTasks: React.FC<DailyTasksProps> = ({ 
   tareas, actividades, proyectos, users, 
   onAddTask, onUpdateTaskStatus, onUpdateTaskDates, onAddActivity, onToggleActivity 
@@ -28,12 +40,12 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
   const [filterEstados, setFilterEstados] = useState<ProjectStatus[]>(['DECK', 'WIP', 'FROZEN', 'FINALIZADA']);
   const [filterLineasNegocio, setFilterLineasNegocio] = useState<number[]>(() => INITIAL_LINEAS.map((l) => l.id));
 
-  const [newTaskForm, setNewTaskForm] = useState({
+  const [newTaskForm, setNewTaskForm] = useState<NewTaskForm>({
     Title: '',
     OT: proyectos[0]?.OT || '',
     ID_Disciplina: 1,
-    ID_Ejecutor: users.find(u => u.rol === 'ejecutor')?.id || users[0].id,
-    GerenteTarea: users.find(u => u.rol === 'gerente_tarea')?.id || users[0].id,
+    ID_Ejecutor: users[0]?.id || '',
+    GerenteTarea: users.find(u => u.rol === 'gerente_tarea')?.id || '',
     FPlaneadaInicioOrig: '',
     FPlaneadaFinOrig: '',
     FEsperadaIni: '',
@@ -42,8 +54,18 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
 
   const generatedTaskId = `${newTaskForm.OT.trim()}-${newTaskForm.Title.trim()}`;
 
+  const usuariosDisponibles = useMemo(
+    () => [...users].sort((a, b) => a.nombre.localeCompare(b.nombre)),
+    [users]
+  );
+
   const gerentesDisponibles = useMemo(() => 
-    users.filter(u => u.rol === 'gerente_tarea'),
+    usuariosDisponibles.filter(u => u.rol === 'gerente_tarea'),
+    [usuariosDisponibles]
+  );
+
+  const usersById = useMemo(
+    () => new Map(users.map((user) => [user.id, user])),
     [users]
   );
 
@@ -90,8 +112,14 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
 
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
+    if (newTaskForm.GerenteTarea === '' || newTaskForm.ID_Ejecutor === '') {
+      window.alert('Debe seleccionar gerente de tarea y ejecutor.');
+      return;
+    }
     onAddTask({
       ...newTaskForm,
+      GerenteTarea: newTaskForm.GerenteTarea,
+      ID_Ejecutor: newTaskForm.ID_Ejecutor,
       ID_Unico_Tarea: generatedTaskId,
       FPlaneadaInicioAct: newTaskForm.FPlaneadaInicioOrig,
       FPlaneadaFinAct: newTaskForm.FPlaneadaFinOrig,
@@ -280,9 +308,40 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black uppercase text-slate-400">Gerente de Tarea</label>
+                  <select
+                    className="w-full p-4 border border-slate-200 rounded-2xl text-sm font-semibold"
+                    required
+                    value={newTaskForm.GerenteTarea}
+                    onChange={e => setNewTaskForm({ ...newTaskForm, GerenteTarea: Number(e.target.value) })}
+                  >
+                    <option value="" disabled>Seleccione gerente</option>
+                    {gerentesDisponibles.map((user) => (
+                      <option key={user.id} value={user.id}>{user.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-black uppercase text-slate-400">Ejecutor</label>
+                  <select
+                    className="w-full p-4 border border-slate-200 rounded-2xl text-sm font-semibold"
+                    required
+                    value={newTaskForm.ID_Ejecutor}
+                    onChange={e => setNewTaskForm({ ...newTaskForm, ID_Ejecutor: Number(e.target.value) })}
+                  >
+                    <option value="" disabled>Seleccione ejecutor</option>
+                    {usuariosDisponibles.map((user) => (
+                      <option key={user.id} value={user.id}>{user.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="pt-4 flex gap-3">
                  <button type="button" onClick={() => setIsAddingTask(false)} className="flex-1 bg-slate-100 text-slate-600 py-4 rounded-2xl font-black text-xs uppercase">Cancelar</button>
-                 <button type="submit" className="flex-2 bg-blue-600 text-white py-4 px-8 rounded-2xl font-black text-xs uppercase shadow-xl shadow-blue-100">Crear Tarea</button>
+                 <button type="submit" disabled={gerentesDisponibles.length === 0 || usuariosDisponibles.length === 0} className="flex-2 bg-blue-600 text-white py-4 px-8 rounded-2xl font-black text-xs uppercase shadow-xl shadow-blue-100 disabled:opacity-40 disabled:cursor-not-allowed">Crear Tarea</button>
               </div>
             </div>
           </form>
@@ -296,6 +355,10 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
           const project = proyectos.find(p => p.OT === tarea.OT);
           const isFinished = tarea.Estado === 'FINALIZADA';
           const hasStarted = Boolean(tarea.FRealInicio);
+          const gerenteActual = usersById.get(tarea.GerenteTarea);
+          const ejecutorActual = usersById.get(tarea.ID_Ejecutor);
+          const gerenteValido = gerentesDisponibles.some((user) => user.id === tarea.GerenteTarea);
+          const ejecutorValido = usuariosDisponibles.some((user) => user.id === tarea.ID_Ejecutor);
 
           return (
             <div key={tarea.ID_Unico_Tarea} className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col group/card">
@@ -362,6 +425,44 @@ export const DailyTasks: React.FC<DailyTasksProps> = ({
                       <div className="text-[10px] text-slate-800 font-black space-y-2 bg-emerald-50/20 p-4 rounded-3xl border border-emerald-100/50">
                         <div className="flex justify-between"><span>Inicio:</span> <span className="text-emerald-700">{formatDate(tarea.FRealInicio) || 'Pendiente'}</span></div>
                         <div className="flex justify-between"><span>Cierre:</span> <span className="text-emerald-700">{formatDate(tarea.FRealFin) || 'Pendiente'}</span></div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 col-span-2">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <Users size={13} /> Responsables
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase text-slate-400">Gerente de Tarea</label>
+                          <select
+                            className="w-full text-[11px] font-black bg-white border-2 border-slate-100 rounded-2xl px-4 py-2.5 outline-none focus:ring-4 focus:ring-indigo-100 transition-all text-slate-700"
+                            value={tarea.GerenteTarea}
+                            onChange={(e) => onUpdateTaskDates(tarea.id, { GerenteTarea: Number(e.target.value) })}
+                          >
+                            {!gerenteValido && (
+                              <option value={tarea.GerenteTarea}>{gerenteActual?.nombre || 'Usuario no encontrado'}</option>
+                            )}
+                            {gerentesDisponibles.map((user) => (
+                              <option key={user.id} value={user.id}>{user.nombre}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase text-slate-400">Ejecutor</label>
+                          <select
+                            className="w-full text-[11px] font-black bg-white border-2 border-slate-100 rounded-2xl px-4 py-2.5 outline-none focus:ring-4 focus:ring-blue-100 transition-all text-slate-700"
+                            value={tarea.ID_Ejecutor}
+                            onChange={(e) => onUpdateTaskDates(tarea.id, { ID_Ejecutor: Number(e.target.value) })}
+                          >
+                            {!ejecutorValido && (
+                              <option value={tarea.ID_Ejecutor}>{ejecutorActual?.nombre || 'Usuario no encontrado'}</option>
+                            )}
+                            {usuariosDisponibles.map((user) => (
+                              <option key={user.id} value={user.id}>{user.nombre}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                     </div>
                   </div>
